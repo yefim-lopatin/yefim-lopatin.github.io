@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Личная страница проектов Yefim Lopatin" />
+    <title>Проекты · Yefim Lopatin</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+        background: #101114;
+        color: #f3f4f6;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top right, #26324a 0, #101114 42%); }
+      main { width: min(960px, calc(100% - 40px)); margin: 0 auto; padding: 96px 0 64px; }
+      .eyebrow { color: #9ca3af; letter-spacing: .14em; text-transform: uppercase; font-size: 12px; }
+      h1 { max-width: 680px; margin: 18px 0 16px; font-size: clamp(42px, 8vw, 76px); line-height: .98; letter-spacing: -.06em; }
+      .intro { max-width: 560px; color: #b8bec9; font-size: 18px; line-height: 1.6; }
+      .projects { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 56px; }
+      .project { display: block; padding: 24px; border: 1px solid #303540; border-radius: 20px; color: inherit; text-decoration: none; background: rgba(21, 24, 31, .82); transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+      .project:hover, .project:focus-visible { transform: translateY(-4px); border-color: #a8b7ff; background: #1b2030; outline: none; }
+      .icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: #a8b7ff; color: #171925; font-size: 24px; }
+      h2 { margin: 26px 0 8px; font-size: 24px; }
+      .project p { min-height: 48px; margin: 0 0 24px; color: #b8bec9; line-height: 1.5; }
+      .open { color: #c8d0ff; font-weight: 650; }
+      footer { margin-top: 80px; color: #707785; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">Личные проекты</div>
+      <h1>Идеи, которые становятся приложениями.</h1>
+      <p class="intro">Здесь будут собираться мои эксперименты, инструменты и проекты.</p>
+
+      <section class="projects" aria-label="Проекты">
+        <a class="project" href="/excalidraw/">
+          <div class="icon" aria-hidden="true">✦</div>
+          <h2>Excalidraw</h2>
+          <p>Моя локальная версия бесконечной доски для схем, заметок и идей.</p>
+          <span class="open">Открыть проект →</span>
+        </a>
+      </section>
+
+      <footer>Yefim Lopatin · 2026</footer>
+    </main>
+  </body>
+</html>
