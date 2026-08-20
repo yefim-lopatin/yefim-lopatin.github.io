@@ -2,6 +2,7 @@ import React from "react";
 import { vi } from "vitest";
 
 import {
+  CODES,
   CURSOR_TYPE,
   resolvablePromise,
   updateActiveTool,
@@ -73,6 +74,17 @@ describe("setActiveTool()", () => {
     expect(h.state.activeTool.type).toBe("custom");
     expect(h.state.activeTool.customType).toBe("comment");
   });
+
+  it("should switch tools by physical V and P on non-latin layouts", () => {
+    const container =
+      GlobalTestState.renderResult.container.querySelector(".excalidraw")!;
+
+    fireEvent.keyDown(container, { key: "з", code: CODES.P });
+    expect(h.state.activeTool.type).toBe("freedraw");
+
+    fireEvent.keyDown(container, { key: "м", code: CODES.V });
+    expect(h.state.activeTool.type).toBe("selection");
+  });
 });
 describe("findShapeByKey()", () => {
   const appWithPreferredTool = (
@@ -104,6 +116,22 @@ describe("findShapeByKey()", () => {
     expect(findShapeByKey("1", app)).toBeNull();
     expect(findShapeByKey("7", app)).toBeNull();
   });
+
+  it.each([
+    ["м", CODES.V, "selection"],
+    ["ν", CODES.V, "selection"],
+    ["重", CODES.V, "selection"],
+    ["з", CODES.P, "freedraw"],
+    ["π", CODES.P, "freedraw"],
+    ["卜", CODES.P, "freedraw"],
+  ] as const)(
+    "matches physical V and P across keyboard layouts",
+    (key, code, tool) => {
+      const app = appWithPreferredTool("selection");
+
+      expect(findShapeByKey(key, app, false, code)).toBe(tool);
+    },
+  );
 
   it("letter shortcuts are CapsLock-insensitive", () => {
     const app = appWithPreferredTool("selection");

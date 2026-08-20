@@ -5521,7 +5521,12 @@ class App extends React.Component<AppProps, AppState> {
         !this.state.selectionElement &&
         !this.state.selectedElementsAreBeingDragged
       ) {
-        const shape = findShapeByKey(event.key, this, event.shiftKey);
+        const shape = findShapeByKey(
+          event.key,
+          this,
+          event.shiftKey,
+          event.code,
+        );
 
         if (this.state.viewModeEnabled && !oneOf(shape, ["laser", "hand"])) {
           return;

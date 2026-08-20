@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useEffect, useState } from "react";
 
-import { KEYS, capitalizeString } from "@excalidraw/common";
+import { CODES, KEYS, capitalizeString } from "@excalidraw/common";
 
 import type { PointerType } from "@excalidraw/element/types";
 
@@ -186,6 +186,7 @@ export const findShapeByKey = (
   key: string,
   app: AppClassProperties,
   shiftKey: boolean = false,
+  code?: string,
 ) => {
   // CapsLock-insensitive: the caller excludes every modifier but shift, and
   // shift is matched explicitly below, so a capital letter on its own means
@@ -200,6 +201,8 @@ export const findShapeByKey = (
     }
     if (
       (numericKey != null && key === numericKey) ||
+      (type === "selection" && code === CODES.V) ||
+      (type === "freedraw" && code === CODES.P) ||
       (letterKey &&
         (typeof letterKey === "string"
           ? letterKey === lowerKey
