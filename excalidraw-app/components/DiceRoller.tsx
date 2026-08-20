@@ -35,6 +35,7 @@ const DICE_SIZE = 64;
 const DICE_GAP = 12;
 const DICE_COLUMNS = 5;
 const DICE_COUNT_PRESETS = [1, 2, 3, 4, 5, 10] as const;
+const PERCENTILE_DICE_WIDTH = 116;
 
 export const rollDie = (sides: number): number => {
   if (!Number.isInteger(sides) || sides < 2) {
@@ -107,7 +108,65 @@ export const formatDiceRoll = (
   return `d${sides} × ${results.length}: ${results.join(" · ")}`;
 };
 
-const createDieSvg = (
+export const getDieDimensions = (sides: DiceSides) => ({
+  width: sides === 100 ? PERCENTILE_DICE_WIDTH : DICE_SIZE,
+  height: DICE_SIZE,
+});
+
+const createValueSvg = (
+  value: string | number,
+  x: number,
+  y: number,
+  fontSize: number,
+  textColor: string,
+  backgroundColor: string,
+) =>
+  `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="700" fill="${textColor}" stroke="${backgroundColor}" stroke-width="5" stroke-linejoin="round" style="paint-order: stroke">${value}</text>`;
+
+const createD10Svg = (
+  centerX: number,
+  centerY: number,
+  radiusX: number,
+  radiusY: number,
+  value: string | number,
+  backgroundColor: string,
+  accentColor: string,
+  textColor: string,
+) => {
+  const points = [
+    [0, -1],
+    [0.53, -0.8],
+    [0.96, -0.28],
+    [0.93, 0.3],
+    [0.46, 0.8],
+    [0, 1],
+    [-0.46, 0.8],
+    [-0.93, 0.3],
+    [-0.96, -0.28],
+    [-0.53, -0.8],
+  ]
+    .map(([x, y]) => `${centerX + x * radiusX},${centerY + y * radiusY}`)
+    .join(" ");
+
+  return `<polygon points="${points}" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M ${centerX} ${centerY - radiusY} L ${centerX} ${
+    centerY + radiusY
+  } M ${centerX - radiusX * 0.96} ${
+    centerY - radiusY * 0.28
+  } L ${centerX} ${centerY} L ${centerX + radiusX * 0.96} ${
+    centerY - radiusY * 0.28
+  }" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
+    ${createValueSvg(
+      value,
+      centerX,
+      centerY + 1,
+      radiusX < 27 ? 16 : 20,
+      textColor,
+      backgroundColor,
+    )}`;
+};
+
+export const createDieSvg = (
   sides: DiceSides,
   result: number,
   accentColor: string,
@@ -116,11 +175,142 @@ const createDieSvg = (
   const backgroundColor = isDarkTheme ? "#2f2f2f" : "#ffffff";
   const textColor = isDarkTheme ? "#f5f5f5" : "#1f2937";
   const resultFontSize = result >= 100 ? 16 : result >= 10 ? 20 : 24;
+  const { width, height } = getDieDimensions(sides);
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${DICE_SIZE}" height="${DICE_SIZE}" viewBox="0 0 ${DICE_SIZE} ${DICE_SIZE}">
-    <rect x="3" y="3" width="58" height="58" rx="15" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3"/>
-    <text x="32" y="38" text-anchor="middle" font-family="Arial, sans-serif" font-size="${resultFontSize}" font-weight="700" fill="${textColor}">${result}</text>
-    <text x="32" y="53" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="600" fill="${accentColor}">d${sides}</text>
+  let shape: string;
+  switch (sides) {
+    case 2:
+      shape = `<g data-die-shape="coin">
+        <circle cx="32" cy="32" r="28" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3"/>
+        <circle cx="32" cy="32" r="23" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
+        ${createValueSvg(
+          result,
+          32,
+          33,
+          resultFontSize,
+          textColor,
+          backgroundColor,
+        )}
+      </g>`;
+      break;
+    case 4:
+      shape = `<g data-die-shape="tetrahedron">
+        <polygon points="32,3 60,58 4,58" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M 32 3 L 32 35 L 4 58 M 32 35 L 60 58" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
+        ${createValueSvg(
+          result,
+          32,
+          40,
+          resultFontSize,
+          textColor,
+          backgroundColor,
+        )}
+      </g>`;
+      break;
+    case 6:
+      shape = `<g data-die-shape="cube">
+        <rect x="5" y="5" width="54" height="54" rx="5" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3"/>
+        ${createValueSvg(
+          result,
+          32,
+          33,
+          resultFontSize,
+          textColor,
+          backgroundColor,
+        )}
+      </g>`;
+      break;
+    case 8:
+      shape = `<g data-die-shape="octahedron">
+        <polygon points="32,3 60,32 32,61 4,32" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M 32 3 L 32 61 M 4 32 L 32 17 L 60 32 M 4 32 L 32 47 L 60 32" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
+        ${createValueSvg(
+          result,
+          32,
+          33,
+          resultFontSize,
+          textColor,
+          backgroundColor,
+        )}
+      </g>`;
+      break;
+    case 10:
+      shape = `<g data-die-shape="pentagonal-trapezohedron">
+        ${createD10Svg(
+          32,
+          32,
+          29,
+          29,
+          result,
+          backgroundColor,
+          accentColor,
+          textColor,
+        )}
+      </g>`;
+      break;
+    case 12:
+      shape = `<g data-die-shape="dodecahedron">
+        <polygon points="32,3 47,7 57,17 61,32 57,47 47,57 32,61 17,57 7,47 3,32 7,17 17,7" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3" stroke-linejoin="round"/>
+        <polygon points="32,14 49,27 42,48 22,48 15,27" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
+        <path d="M 32 3 L 32 14 M 57 17 L 49 27 M 57 47 L 42 48 M 17 57 L 22 48 M 7 17 L 15 27" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
+        ${createValueSvg(
+          result,
+          32,
+          33,
+          resultFontSize,
+          textColor,
+          backgroundColor,
+        )}
+      </g>`;
+      break;
+    case 20:
+      shape = `<g data-die-shape="icosahedron">
+        <polygon points="32,3 57,17 61,44 43,60 20,60 3,44 7,17" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M 32 3 L 20 60 M 32 3 L 43 60 M 7 17 L 52 49 M 57 17 L 12 49 M 3 44 L 61 44" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
+        ${createValueSvg(
+          result,
+          32,
+          33,
+          resultFontSize,
+          textColor,
+          backgroundColor,
+        )}
+      </g>`;
+      break;
+    case 100: {
+      const tens =
+        result === 100
+          ? "00"
+          : String(Math.floor(result / 10) * 10).padStart(2, "0");
+      const units = result === 100 ? 0 : result % 10;
+      shape = `<g data-die-shape="percentile-pair">
+        ${createD10Svg(
+          29,
+          32,
+          25,
+          27,
+          tens,
+          backgroundColor,
+          accentColor,
+          textColor,
+        )}
+        ${createD10Svg(
+          87,
+          32,
+          25,
+          27,
+          units,
+          backgroundColor,
+          accentColor,
+          textColor,
+        )}
+      </g>`;
+      break;
+    }
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+    ${shape}
   </svg>`;
 };
 
@@ -151,10 +341,12 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         },
         appState,
       );
+      const dieDimensions = getDieDimensions(roll.sides);
       const columns = Math.min(roll.results.length, DICE_COLUMNS);
       const rows = Math.ceil(roll.results.length / columns);
-      const boardWidth = columns * DICE_SIZE + (columns - 1) * DICE_GAP;
-      const boardHeight = rows * DICE_SIZE + (rows - 1) * DICE_GAP;
+      const boardWidth =
+        columns * dieDimensions.width + (columns - 1) * DICE_GAP;
+      const boardHeight = rows * dieDimensions.height + (rows - 1) * DICE_GAP;
       const files: BinaryFileData[] = [];
       const resultElements = roll.results.map((result, index) => {
         const fileId = randomId() as FileId;
@@ -178,10 +370,16 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         const row = Math.floor(index / columns);
         return newImageElement({
           type: "image",
-          x: scenePoint.x - boardWidth / 2 + column * (DICE_SIZE + DICE_GAP),
-          y: scenePoint.y - boardHeight / 2 + row * (DICE_SIZE + DICE_GAP),
-          width: DICE_SIZE,
-          height: DICE_SIZE,
+          x:
+            scenePoint.x -
+            boardWidth / 2 +
+            column * (dieDimensions.width + DICE_GAP),
+          y:
+            scenePoint.y -
+            boardHeight / 2 +
+            row * (dieDimensions.height + DICE_GAP),
+          width: dieDimensions.width,
+          height: dieDimensions.height,
           fileId,
           status: "saved",
           customData: {
