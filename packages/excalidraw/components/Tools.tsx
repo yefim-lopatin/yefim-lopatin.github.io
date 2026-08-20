@@ -74,7 +74,6 @@ export const TOOLS = defineTools({
   selection: {
     icon: SelectionIcon,
     letterKey: KEYS.V,
-    numericKey: KEYS["1"],
     fillable: true,
   },
   rectangle: {
@@ -110,7 +109,6 @@ export const TOOLS = defineTools({
   freedraw: {
     icon: FreedrawIcon,
     letterKey: [KEYS.P, KEYS.X],
-    numericKey: KEYS["7"],
   },
   text: {
     icon: TextIcon,

@@ -439,6 +439,10 @@ body.excalidraw-cursor-resize * {
 
   .App-menu_top > .shapes-section {
     grid-column: 2;
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .selected-shape-actions-container {

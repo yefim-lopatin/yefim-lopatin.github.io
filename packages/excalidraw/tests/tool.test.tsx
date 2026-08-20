@@ -90,14 +90,19 @@ describe("findShapeByKey()", () => {
     const app = appWithPreferredTool("selection");
 
     expect(findShapeByKey("v", app)).toBe("selection");
-    expect(findShapeByKey("1", app)).toBe("selection");
   });
 
   it("selection shortcuts activate lasso when it's preferred", () => {
     const app = appWithPreferredTool("lasso");
 
     expect(findShapeByKey("v", app)).toBe("lasso");
-    expect(findShapeByKey("1", app)).toBe("lasso");
+  });
+
+  it("does not match the replaced numeric shortcuts", () => {
+    const app = appWithPreferredTool("selection");
+
+    expect(findShapeByKey("1", app)).toBeNull();
+    expect(findShapeByKey("7", app)).toBeNull();
   });
 
   it("letter shortcuts are CapsLock-insensitive", () => {
@@ -105,6 +110,7 @@ describe("findShapeByKey()", () => {
 
     expect(findShapeByKey("V", app)).toBe("selection");
     expect(findShapeByKey("R", app)).toBe("rectangle");
+    expect(findShapeByKey("P", app)).toBe("freedraw");
     expect(findShapeByKey("X", app)).toBe("freedraw");
   });
 
