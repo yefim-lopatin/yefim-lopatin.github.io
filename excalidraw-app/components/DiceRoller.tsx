@@ -392,6 +392,14 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
   }, []);
 
   useEffect(() => {
+    document.body.classList.toggle(
+      "dice-roller--dragging",
+      dragPreview !== null,
+    );
+    return () => document.body.classList.remove("dice-roller--dragging");
+  }, [dragPreview]);
+
+  useEffect(() => {
     if (!isOpen) {
       return;
     }
@@ -448,7 +456,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
     event: PointerEvent<HTMLButtonElement>,
     sides: DiceSides,
   ) => {
-    if (event.button !== 0 || rollAnimation) {
+    if (event.button > 0 || rollAnimation) {
       return;
     }
 
@@ -582,7 +590,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
           style={{ left: dragPreview.clientX, top: dragPreview.clientY }}
           aria-hidden="true"
         >
-          <span className="material-icons">casino</span>
+          <DiceIcon sides={dragPreview.sides} />
           <span>
             d{dragPreview.sides} × {dragPreview.count}
           </span>
@@ -603,7 +611,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
                 key={index}
                 style={{ animationDelay: `${Math.min(index * 35, 180)}ms` }}
               >
-                <span className="material-icons">casino</span>
+                <DiceIcon sides={rollAnimation.sides} />
               </span>
             ))}
           </div>

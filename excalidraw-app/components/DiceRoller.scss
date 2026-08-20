@@ -1,24 +1,11 @@
-@import url("https://fonts.googleapis.com/icon?family=Material+Icons");
-
 .dice-roller {
   position: relative;
   pointer-events: auto;
 }
 
-.dice-roller .material-icons {
-  font-family: "Material Icons";
-  font-size: 1.25rem;
-  font-weight: normal;
-  font-style: normal;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-feature-settings: "liga";
-  -webkit-font-smoothing: antialiased;
-  font-feature-settings: "liga";
+.dice-roller--dragging,
+.dice-roller--dragging * {
+  cursor: grabbing !important;
 }
 
 .dice-roller__toggle {
@@ -30,7 +17,7 @@
   bottom: calc(100% + 0.5rem);
   right: 0;
   z-index: 2;
-  width: 17rem;
+  width: max-content;
   padding: 0.875rem;
   border: 1px solid var(--default-border-color);
   border-radius: var(--border-radius-lg);
@@ -64,7 +51,7 @@
 
 .dice-roller__grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(8, 3rem);
   gap: 0.5rem;
   padding-top: 1.75rem;
 }
@@ -232,9 +219,11 @@
   transition: transform 100ms ease;
 }
 
-.dice-roller__drag-preview .material-icons {
+.dice-roller__drag-preview svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
   color: var(--color-primary);
-  font-size: 1.25rem;
 }
 
 .dice-roller__roll-animation {
@@ -264,8 +253,9 @@
   animation: dice-roller-roll 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.dice-roller__rolling-die .material-icons {
-  font-size: 1.5rem;
+.dice-roller__rolling-die svg {
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
 .dice-roller__rolling-label {

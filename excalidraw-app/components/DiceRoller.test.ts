@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -102,5 +102,33 @@ describe("DiceRoller", () => {
 
     fireEvent.pointerDown(document.body);
     expect(screen.queryByRole("dialog", { name: "Кубики" })).toBeNull();
+  });
+
+  it("shows a die preview and grabbing cursor while dragging", async () => {
+    render(createElement(DiceRoller, { excalidrawAPI: null }));
+
+    fireEvent.keyDown(window, { key: "d", code: "KeyD" });
+    fireEvent.pointerDown(
+      screen.getByRole("button", {
+        name: "Перетащить 1 кубик(а) d20 на холст",
+      }),
+      { button: 0, pointerId: 1, clientX: 120, clientY: 240 },
+    );
+
+    await waitFor(() => {
+      expect(document.body.classList.contains("dice-roller--dragging")).toBe(
+        true,
+      );
+      expect(
+        document.querySelector(".dice-roller__drag-preview svg"),
+      ).toBeTruthy();
+    });
+
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: 130, clientY: 250 });
+    await waitFor(() => {
+      expect(document.body.classList.contains("dice-roller--dragging")).toBe(
+        false,
+      );
+    });
   });
 });

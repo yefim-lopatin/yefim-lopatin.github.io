@@ -290,6 +290,7 @@ export const Toolbar = ({
         <TextToolButton {...toolProps} />
         {UIOptions.tools?.image !== false && <ImageToolButton {...toolProps} />}
         <EraserToolButton {...toolProps} />
+        <ToolbarActionTunnel.Out />
 
         <div
           className="App-toolbar__divider"
@@ -301,7 +302,6 @@ export const Toolbar = ({
           activeTool={activeTool}
           setAppState={setAppState}
         />
-        <ToolbarActionTunnel.Out />
       </Stack.Row>
     </Island>
   );
