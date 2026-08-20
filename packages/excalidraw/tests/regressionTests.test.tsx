@@ -143,7 +143,7 @@ describe("regression tests", () => {
 
   for (const [keys, shape, shouldSelect] of [
     [`2${KEYS.R}`, "rectangle", true],
-    [`3${KEYS.D}`, "diamond", true],
+    [KEYS["3"], "diamond", true],
     [`4${KEYS.O}`, "ellipse", true],
     [`5${KEYS.A}`, "arrow", true],
     [`6${KEYS.L}`, "line", true],

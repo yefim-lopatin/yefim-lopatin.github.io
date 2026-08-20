@@ -7,6 +7,7 @@ import {
   useEditorInterface,
   ExcalidrawAPIProvider,
   useExcalidrawAPI,
+  ToolbarAction,
 } from "@excalidraw/excalidraw";
 import { trackEvent } from "@excalidraw/excalidraw/analytics";
 import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
@@ -995,12 +996,11 @@ const ExcalidrawWrapper = () => {
         onThemeChange={setAppTheme}
         renderTopRightUI={(isMobile) => {
           if (isMobile) {
-            return <DiceRoller excalidrawAPI={excalidrawAPI} />;
+            return null;
           }
 
           return (
             <div className="excalidraw-ui-top-right">
-              <DiceRoller excalidrawAPI={excalidrawAPI} />
               {excalidrawAPI?.getEditorInterface().formFactor === "desktop" && (
                 <ExcalidrawPlusPromoBanner
                   isSignedIn={isExcalidrawPlusSignedUser}
@@ -1035,6 +1035,9 @@ const ExcalidrawWrapper = () => {
           }
         }}
       >
+        <ToolbarAction>
+          <DiceRoller excalidrawAPI={excalidrawAPI} />
+        </ToolbarAction>
         <AppMainMenu
           onCollabDialogOpen={onCollabDialogOpen}
           isCollaborating={isCollaborating}

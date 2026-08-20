@@ -7,7 +7,10 @@ import {
 } from "react";
 
 import {
+  CODES,
+  KEYS,
   MIME_TYPES,
+  isWritableElement,
   randomId,
   viewportCoordsToSceneCoords,
 } from "@excalidraw/common";
@@ -38,6 +41,9 @@ const DICE_GAP = 12;
 const DICE_COLUMNS = 5;
 const DICE_COUNT_PRESETS = [1, 2, 3, 4, 5, 10] as const;
 const PERCENTILE_DICE_WIDTH = 116;
+const RESULT_TEXT_COLOR = "#000000";
+const RESULT_TEXT_OUTLINE = "#ffffff";
+const D10_FACETS_PATH = "M12 2L7.5 12L12 22M12 2L16.5 12L12 22";
 
 export const rollDie = (sides: number): number => {
   if (!Number.isInteger(sides) || sides < 2) {
@@ -62,12 +68,6 @@ export const rollDie = (sides: number): number => {
 
 type DiceRollerProps = {
   excalidrawAPI: ExcalidrawImperativeAPI | null;
-};
-
-type LastRoll = {
-  sides: DiceSides;
-  count: number;
-  results: number[];
 };
 
 type DragState = {
@@ -100,16 +100,6 @@ const createInitialDiceCounts = (): Record<DiceSides, number> => ({
   100: 1,
 });
 
-export const formatDiceRoll = (
-  sides: DiceSides,
-  results: readonly number[],
-) => {
-  if (results.length === 1) {
-    return `d${sides}: ${results[0]}`;
-  }
-  return `d${sides} × ${results.length}: ${results.join(" · ")}`;
-};
-
 export const getDieDimensions = (sides: DiceSides) => ({
   width: sides === 100 ? PERCENTILE_DICE_WIDTH : DICE_SIZE,
   height: DICE_SIZE,
@@ -125,6 +115,11 @@ const createValueSvg = (
 ) =>
   `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="700" fill="${textColor}" stroke="${backgroundColor}" stroke-width="5" stroke-linejoin="round" style="paint-order: stroke">${value}</text>`;
 
+const createD10FacetsSvg = () => `<g data-die-facets="d10">
+  <path d="${D10_FACETS_PATH}" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round" opacity="0.8"/>
+  <path d="${D10_FACETS_PATH}" fill="none" stroke="#000000" stroke-width="0.45" stroke-linejoin="round" opacity="0.7"/>
+</g>`;
+
 export const createDieSvg = (
   sides: DiceSides,
   result: number,
@@ -132,7 +127,6 @@ export const createDieSvg = (
   isDarkTheme: boolean,
 ) => {
   const backgroundColor = isDarkTheme ? "#2f2f2f" : "#ffffff";
-  const textColor = isDarkTheme ? "#f5f5f5" : "#1f2937";
   const resultFontSize = result >= 100 ? 16 : result >= 10 ? 20 : 24;
   const { width, height } = getDieDimensions(sides);
 
@@ -147,8 +141,8 @@ export const createDieSvg = (
           32,
           33,
           resultFontSize,
-          textColor,
-          backgroundColor,
+          RESULT_TEXT_COLOR,
+          RESULT_TEXT_OUTLINE,
         )}
       </g>`;
       break;
@@ -162,14 +156,15 @@ export const createDieSvg = (
       shape = `<g data-die-shape="${icon.shape}">
         <g transform="translate(2 2) scale(2.5)">
           <path d="${icon.outlinePath}" fill="${accentColor}"/>
+          ${sides === 10 ? createD10FacetsSvg() : ""}
         </g>
         ${createValueSvg(
           result,
           32,
           sides === 4 ? 38 : 33,
           resultFontSize,
-          backgroundColor,
-          accentColor,
+          RESULT_TEXT_COLOR,
+          RESULT_TEXT_OUTLINE,
         )}
       </g>`;
       break;
@@ -183,12 +178,28 @@ export const createDieSvg = (
       shape = `<g data-die-shape="percentile-pair">
         <g transform="translate(1 5) scale(2.25)">
           <path d="${MDI_DICE_ICONS[10].outlinePath}" fill="${accentColor}"/>
+          ${createD10FacetsSvg()}
         </g>
         <g transform="translate(59 5) scale(2.25)">
           <path d="${MDI_DICE_ICONS[10].outlinePath}" fill="${accentColor}"/>
+          ${createD10FacetsSvg()}
         </g>
-        ${createValueSvg(tens, 28, 33, 16, backgroundColor, accentColor)}
-        ${createValueSvg(units, 86, 33, 18, backgroundColor, accentColor)}
+        ${createValueSvg(
+          tens,
+          28,
+          33,
+          16,
+          RESULT_TEXT_COLOR,
+          RESULT_TEXT_OUTLINE,
+        )}
+        ${createValueSvg(
+          units,
+          86,
+          33,
+          18,
+          RESULT_TEXT_COLOR,
+          RESULT_TEXT_OUTLINE,
+        )}
       </g>`;
       break;
     }
@@ -203,13 +214,13 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredSides, setHoveredSides] = useState<DiceSides | null>(null);
   const [diceCounts, setDiceCounts] = useState(createInitialDiceCounts);
-  const [lastRoll, setLastRoll] = useState<LastRoll | null>(null);
   const [dragPreview, setDragPreview] = useState<DragState | null>(null);
   const [rollAnimation, setRollAnimation] = useState<RollAnimation | null>(
     null,
   );
   const dragStateRef = useRef<DragState | null>(null);
   const rollTimerRef = useRef<number | null>(null);
+  const diceRollerRef = useRef<HTMLDivElement | null>(null);
 
   const addRollToCanvas = useCallback(
     (roll: RollAnimation) => {
@@ -306,7 +317,6 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
       }
       setRollAnimation(roll);
       rollTimerRef.current = window.setTimeout(() => {
-        setLastRoll(roll);
         addRollToCanvas(roll);
         setRollAnimation(null);
         rollTimerRef.current = null;
@@ -381,6 +391,59 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const closeOnOutsidePointerDown = (event: globalThis.PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !diceRollerRef.current?.contains(event.target)
+      ) {
+        setIsOpen(false);
+        setHoveredSides(null);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsidePointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointerDown);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    const toggleWithKeyboard = (event: KeyboardEvent) => {
+      const isDiceShortcut =
+        event.key.toLowerCase() === KEYS.D || event.code === CODES.D;
+      if (
+        !isDiceShortcut ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        isWritableElement(event.target)
+      ) {
+        return;
+      }
+
+      const appState = excalidrawAPI?.getAppState();
+      if (appState?.openDialog || appState?.openMenu) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      setHoveredSides(null);
+      setIsOpen((current) => !current);
+    };
+
+    window.addEventListener("keydown", toggleWithKeyboard, true);
+    return () => {
+      window.removeEventListener("keydown", toggleWithKeyboard, true);
+    };
+  }, [excalidrawAPI]);
+
   const handleDiePointerDown = (
     event: PointerEvent<HTMLButtonElement>,
     sides: DiceSides,
@@ -411,34 +474,30 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
   };
 
   return (
-    <div className="dice-roller" data-testid="dice-roller">
+    <div className="dice-roller" data-testid="dice-roller" ref={diceRollerRef}>
       <IconButton
-        type="button"
-        icon={<span className="material-icons">casino</span>}
-        aria-label="Открыть кубики НРИ"
-        title="Кубики НРИ"
+        type="toggle"
+        checked={isOpen}
+        icon={<DiceIcon sides={20} />}
+        aria-label="Открыть кубики"
+        aria-keyshortcuts="D"
+        title="Кубики (D)"
+        keyBindingLabel="D"
         data-testid="dice-roller-toggle"
         className="dice-roller__toggle"
-        onClick={() => setIsOpen((isOpen) => !isOpen)}
+        onSelect={() => setIsOpen((current) => !current)}
       />
 
       {isOpen && (
-        <div
-          className="dice-roller__menu"
-          role="dialog"
-          aria-label="Кубики НРИ"
-        >
-          <div className="dice-roller__header">
-            <span className="dice-roller__title">Кубики НРИ</span>
-            <button
-              className="dice-roller__close"
-              type="button"
-              aria-label="Закрыть кубики НРИ"
-              onClick={() => setIsOpen(false)}
-            >
-              ×
-            </button>
-          </div>
+        <div className="dice-roller__menu" role="dialog" aria-label="Кубики">
+          <button
+            className="dice-roller__close"
+            type="button"
+            aria-label="Закрыть кубики"
+            onClick={() => setIsOpen(false)}
+          >
+            ×
+          </button>
 
           <div className="dice-roller__grid">
             {DICE_SIDES.map((sides) => {
@@ -508,29 +567,11 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
                           </button>
                         ))}
                       </div>
-                      <small>Потяните кубик на холст</small>
                     </div>
                   )}
                 </div>
               );
             })}
-          </div>
-
-          <div className="dice-roller__result" aria-live="polite">
-            {lastRoll ? (
-              <div className="dice-roller__last-roll">
-                <span className="dice-roller__last-roll-label">
-                  d{lastRoll.sides} · {lastRoll.count} шт.
-                </span>
-                <div className="dice-roller__last-roll-values">
-                  {lastRoll.results.map((result, index) => (
-                    <span key={`${result}-${index}`}>{result}</span>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              "Наведите на кубик и задайте количество"
-            )}
           </div>
         </div>
       )}

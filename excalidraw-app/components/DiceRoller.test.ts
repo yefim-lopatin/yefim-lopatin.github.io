@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { DiceIcon, MDI_DICE_ICONS, isMdiDiceSides } from "./DiceIcons";
 import {
   DICE_SIDES,
+  DiceRoller,
   createDieSvg,
-  formatDiceRoll,
   getDieDimensions,
   rollDie,
 } from "./DiceRoller";
@@ -31,10 +32,6 @@ describe("DiceRoller", () => {
     expect(() => rollDie(2.5)).toThrow();
   });
 
-  it("formats a multi-dice result for the canvas", () => {
-    expect(formatDiceRoll(4, [1, 3, 4])).toBe("d4 × 3: 1 · 3 · 4");
-  });
-
   it("renders every die with its physical silhouette and no type label", () => {
     const expectedShapes = {
       2: "coin",
@@ -56,10 +53,20 @@ describe("DiceRoller", () => {
 
       expect(svg).toContain(`data-die-shape="${expectedShapes[sides]}"`);
       expect(visibleTexts.some((text) => text.startsWith("d"))).toBe(false);
+      expect(svg).toContain('fill="#000000"');
       if (isMdiDiceSides(sides)) {
         expect(svg).toContain(MDI_DICE_ICONS[sides].outlinePath);
       }
     }
+  });
+
+  it("distinguishes d10 from d8 with facet lines", () => {
+    expect(createDieSvg(10, 5, "#1e1e1e", false)).toContain(
+      'data-die-facets="d10"',
+    );
+    expect(createDieSvg(8, 5, "#1e1e1e", false)).not.toContain(
+      'data-die-facets="d10"',
+    );
   });
 
   it("renders the official MDI dice icons in the picker", () => {
@@ -83,5 +90,17 @@ describe("DiceRoller", () => {
     expect(getDieDimensions(100).width).toBeGreaterThan(
       getDieDimensions(10).width,
     );
+  });
+
+  it("toggles with D and closes on an outside pointer down", () => {
+    render(createElement(DiceRoller, { excalidrawAPI: null }));
+
+    fireEvent.keyDown(window, { key: "d", code: "KeyD" });
+    expect(screen.getByRole("dialog", { name: "Кубики" })).toBeTruthy();
+    expect(screen.queryByText("Кубики НРИ")).toBeNull();
+    expect(screen.queryByText(/Наведите/)).toBeNull();
+
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("dialog", { name: "Кубики" })).toBeNull();
   });
 });

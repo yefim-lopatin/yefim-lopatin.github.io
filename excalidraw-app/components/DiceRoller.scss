@@ -27,7 +27,7 @@
 
 .dice-roller__menu {
   position: absolute;
-  top: calc(100% + 0.5rem);
+  bottom: calc(100% + 0.5rem);
   right: 0;
   z-index: 2;
   width: 17rem;
@@ -39,28 +39,11 @@
   color: var(--color-on-surface);
 }
 
-.dice-roller__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
-}
-
-.dice-roller__title {
-  font-size: 0.9375rem;
-  font-weight: 600;
-}
-
-.dice-roller__header::after {
-  margin-right: auto;
-  margin-left: 0.5rem;
-  color: var(--color-muted-darker);
-  content: "Наведите → выберите → перетащите";
-  font-size: 0.625rem;
-}
-
 .dice-roller__close {
-  display: inline-grid;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: grid;
   width: 1.5rem;
   height: 1.5rem;
   padding: 0;
@@ -83,7 +66,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
-  padding-top: 0.125rem;
+  padding-top: 1.75rem;
 }
 
 .dice-roller__die-wrapper {
@@ -132,48 +115,6 @@
   box-shadow: 0 0.25rem 0.75rem rgb(0 0 0 / 12%);
   outline: none;
   transform: translateY(-0.125rem);
-}
-
-.dice-roller__result {
-  min-height: 2.75rem;
-  margin-top: 0.75rem;
-  padding: 0.5rem 0.625rem;
-  border-radius: var(--border-radius-md);
-  background: var(--color-surface-low);
-  color: var(--color-muted-darker);
-  font-size: 0.75rem;
-}
-
-.dice-roller__last-roll {
-  display: grid;
-  gap: 0.375rem;
-  width: 100%;
-}
-
-.dice-roller__last-roll-label {
-  color: var(--color-muted-darker);
-  font-size: 0.6875rem;
-  font-weight: 600;
-}
-
-.dice-roller__last-roll-values {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-}
-
-.dice-roller__last-roll-values span {
-  display: inline-grid;
-  min-width: 1.75rem;
-  height: 1.75rem;
-  padding: 0 0.25rem;
-  place-items: center;
-  border: 1px solid var(--color-primary);
-  border-radius: var(--border-radius-md);
-  background: var(--island-bg-color);
-  color: var(--color-on-surface);
-  font-size: 0.8125rem;
-  font-weight: 700;
 }
 
 .dice-roller__quantity {
@@ -265,11 +206,6 @@
   border-color: var(--color-primary);
   background: var(--color-primary-light);
   outline: none;
-}
-
-.dice-roller__quantity small {
-  color: var(--color-muted-darker);
-  white-space: nowrap;
 }
 
 .dice-roller__drag-preview,

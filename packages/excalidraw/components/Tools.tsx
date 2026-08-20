@@ -84,7 +84,6 @@ export const TOOLS = defineTools({
   },
   diamond: {
     icon: DiamondIcon,
-    letterKey: KEYS.D,
     numericKey: KEYS["3"],
     fillable: true,
   },

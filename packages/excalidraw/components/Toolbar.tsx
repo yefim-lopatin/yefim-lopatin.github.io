@@ -218,6 +218,7 @@ export const Toolbar = ({
   onLockToggle: () => void;
   heading: React.ReactNode;
 }) => {
+  const { ToolbarActionTunnel } = useTunnels();
   const editorInterface = useEditorInterface();
   const isCompactStylesPanel = useStylesPanelMode() === "compact";
 
@@ -300,7 +301,13 @@ export const Toolbar = ({
           activeTool={activeTool}
           setAppState={setAppState}
         />
+        <ToolbarActionTunnel.Out />
       </Stack.Row>
     </Island>
   );
+};
+
+export const ToolbarAction = ({ children }: { children: React.ReactNode }) => {
+  const { ToolbarActionTunnel } = useTunnels();
+  return <ToolbarActionTunnel.In>{children}</ToolbarActionTunnel.In>;
 };
