@@ -22,6 +22,8 @@ import type {
 } from "@excalidraw/excalidraw/types";
 import type { FileId } from "@excalidraw/element/types";
 
+import { DiceIcon, MDI_DICE_ICONS } from "./DiceIcons";
+
 import "./DiceRoller.scss";
 
 export const DICE_SIDES = [2, 4, 6, 8, 10, 12, 20, 100] as const;
@@ -123,49 +125,6 @@ const createValueSvg = (
 ) =>
   `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="700" fill="${textColor}" stroke="${backgroundColor}" stroke-width="5" stroke-linejoin="round" style="paint-order: stroke">${value}</text>`;
 
-const createD10Svg = (
-  centerX: number,
-  centerY: number,
-  radiusX: number,
-  radiusY: number,
-  value: string | number,
-  backgroundColor: string,
-  accentColor: string,
-  textColor: string,
-) => {
-  const points = [
-    [0, -1],
-    [0.53, -0.8],
-    [0.96, -0.28],
-    [0.93, 0.3],
-    [0.46, 0.8],
-    [0, 1],
-    [-0.46, 0.8],
-    [-0.93, 0.3],
-    [-0.96, -0.28],
-    [-0.53, -0.8],
-  ]
-    .map(([x, y]) => `${centerX + x * radiusX},${centerY + y * radiusY}`)
-    .join(" ");
-
-  return `<polygon points="${points}" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M ${centerX} ${centerY - radiusY} L ${centerX} ${
-    centerY + radiusY
-  } M ${centerX - radiusX * 0.96} ${
-    centerY - radiusY * 0.28
-  } L ${centerX} ${centerY} L ${centerX + radiusX * 0.96} ${
-    centerY - radiusY * 0.28
-  }" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
-    ${createValueSvg(
-      value,
-      centerX,
-      centerY + 1,
-      radiusX < 27 ? 16 : 20,
-      textColor,
-      backgroundColor,
-    )}`;
-};
-
 export const createDieSvg = (
   sides: DiceSides,
   result: number,
@@ -194,89 +153,27 @@ export const createDieSvg = (
       </g>`;
       break;
     case 4:
-      shape = `<g data-die-shape="tetrahedron">
-        <polygon points="32,3 60,58 4,58" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3" stroke-linejoin="round"/>
-        <path d="M 32 3 L 32 35 L 4 58 M 32 35 L 60 58" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
-        ${createValueSvg(
-          result,
-          32,
-          40,
-          resultFontSize,
-          textColor,
-          backgroundColor,
-        )}
-      </g>`;
-      break;
     case 6:
-      shape = `<g data-die-shape="cube">
-        <rect x="5" y="5" width="54" height="54" rx="5" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3"/>
-        ${createValueSvg(
-          result,
-          32,
-          33,
-          resultFontSize,
-          textColor,
-          backgroundColor,
-        )}
-      </g>`;
-      break;
     case 8:
-      shape = `<g data-die-shape="octahedron">
-        <polygon points="32,3 60,32 32,61 4,32" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3" stroke-linejoin="round"/>
-        <path d="M 32 3 L 32 61 M 4 32 L 32 17 L 60 32 M 4 32 L 32 47 L 60 32" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
+    case 10:
+    case 12:
+    case 20: {
+      const icon = MDI_DICE_ICONS[sides];
+      shape = `<g data-die-shape="${icon.shape}">
+        <g transform="translate(2 2) scale(2.5)">
+          <path d="${icon.outlinePath}" fill="${accentColor}"/>
+        </g>
         ${createValueSvg(
           result,
           32,
-          33,
+          sides === 4 ? 38 : 33,
           resultFontSize,
-          textColor,
-          backgroundColor,
-        )}
-      </g>`;
-      break;
-    case 10:
-      shape = `<g data-die-shape="pentagonal-trapezohedron">
-        ${createD10Svg(
-          32,
-          32,
-          29,
-          29,
-          result,
           backgroundColor,
           accentColor,
-          textColor,
         )}
       </g>`;
       break;
-    case 12:
-      shape = `<g data-die-shape="dodecahedron">
-        <polygon points="32,3 47,7 57,17 61,32 57,47 47,57 32,61 17,57 7,47 3,32 7,17 17,7" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3" stroke-linejoin="round"/>
-        <polygon points="32,14 49,27 42,48 22,48 15,27" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
-        <path d="M 32 3 L 32 14 M 57 17 L 49 27 M 57 47 L 42 48 M 17 57 L 22 48 M 7 17 L 15 27" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
-        ${createValueSvg(
-          result,
-          32,
-          33,
-          resultFontSize,
-          textColor,
-          backgroundColor,
-        )}
-      </g>`;
-      break;
-    case 20:
-      shape = `<g data-die-shape="icosahedron">
-        <polygon points="32,3 57,17 61,44 43,60 20,60 3,44 7,17" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3" stroke-linejoin="round"/>
-        <path d="M 32 3 L 20 60 M 32 3 L 43 60 M 7 17 L 52 49 M 57 17 L 12 49 M 3 44 L 61 44" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
-        ${createValueSvg(
-          result,
-          32,
-          33,
-          resultFontSize,
-          textColor,
-          backgroundColor,
-        )}
-      </g>`;
-      break;
+    }
     case 100: {
       const tens =
         result === 100
@@ -284,26 +181,14 @@ export const createDieSvg = (
           : String(Math.floor(result / 10) * 10).padStart(2, "0");
       const units = result === 100 ? 0 : result % 10;
       shape = `<g data-die-shape="percentile-pair">
-        ${createD10Svg(
-          29,
-          32,
-          25,
-          27,
-          tens,
-          backgroundColor,
-          accentColor,
-          textColor,
-        )}
-        ${createD10Svg(
-          87,
-          32,
-          25,
-          27,
-          units,
-          backgroundColor,
-          accentColor,
-          textColor,
-        )}
+        <g transform="translate(1 5) scale(2.25)">
+          <path d="${MDI_DICE_ICONS[10].outlinePath}" fill="${accentColor}"/>
+        </g>
+        <g transform="translate(59 5) scale(2.25)">
+          <path d="${MDI_DICE_ICONS[10].outlinePath}" fill="${accentColor}"/>
+        </g>
+        ${createValueSvg(tens, 28, 33, 16, backgroundColor, accentColor)}
+        ${createValueSvg(units, 86, 33, 18, backgroundColor, accentColor)}
       </g>`;
       break;
     }
@@ -576,7 +461,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
                       handleDiePointerDown(event, sides)
                     }
                   >
-                    <span>d{sides}</span>
+                    <DiceIcon sides={sides} />
                     {count > 1 && <small>×{count}</small>}
                   </button>
 

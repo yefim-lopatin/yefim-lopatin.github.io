@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
+import { DiceIcon, MDI_DICE_ICONS, isMdiDiceSides } from "./DiceIcons";
 import {
   DICE_SIDES,
   createDieSvg,
@@ -53,6 +56,19 @@ describe("DiceRoller", () => {
 
       expect(svg).toContain(`data-die-shape="${expectedShapes[sides]}"`);
       expect(visibleTexts.some((text) => text.startsWith("d"))).toBe(false);
+      if (isMdiDiceSides(sides)) {
+        expect(svg).toContain(MDI_DICE_ICONS[sides].outlinePath);
+      }
+    }
+  });
+
+  it("renders the official MDI dice icons in the picker", () => {
+    for (const sides of DICE_SIDES) {
+      const markup = renderToStaticMarkup(createElement(DiceIcon, { sides }));
+
+      if (isMdiDiceSides(sides)) {
+        expect(markup).toContain(MDI_DICE_ICONS[sides].path);
+      }
     }
   });
 

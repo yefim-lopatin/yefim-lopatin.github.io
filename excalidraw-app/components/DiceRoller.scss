@@ -107,8 +107,15 @@
     background 120ms ease, box-shadow 120ms ease;
 }
 
-.dice-roller__die span {
+.dice-roller__icon {
   display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: 0 auto;
+}
+
+.dice-roller__icon--percentile {
+  width: 2.5rem;
 }
 
 .dice-roller__die small {
