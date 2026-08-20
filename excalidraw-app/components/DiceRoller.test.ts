@@ -23,6 +23,6 @@ describe("DiceRoller", () => {
   });
 
   it("formats a multi-dice result for the canvas", () => {
-    expect(formatDiceRoll(4, [1, 3, 4])).toBe("d4 × 3: [1 + 3 + 4] = 8");
+    expect(formatDiceRoll(4, [1, 3, 4])).toBe("d4 × 3: 1 · 3 · 4");
   });
 });

@@ -6,12 +6,21 @@ import {
   type PointerEvent,
 } from "react";
 
-import { viewportCoordsToSceneCoords } from "@excalidraw/common";
-import { newTextElement } from "@excalidraw/element";
+import {
+  MIME_TYPES,
+  randomId,
+  viewportCoordsToSceneCoords,
+} from "@excalidraw/common";
+import { newImageElement } from "@excalidraw/element";
 import { CaptureUpdateAction } from "@excalidraw/excalidraw";
 import { IconButton } from "@excalidraw/excalidraw/components/IconButton";
+import { getDataURL_sync } from "@excalidraw/excalidraw/data/blob";
 
-import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import type {
+  BinaryFileData,
+  ExcalidrawImperativeAPI,
+} from "@excalidraw/excalidraw/types";
+import type { FileId } from "@excalidraw/element/types";
 
 import "./DiceRoller.scss";
 
@@ -22,6 +31,10 @@ export type DiceSides = typeof DICE_SIDES[number];
 const MAX_DICE_COUNT = 20;
 const DRAG_THRESHOLD = 6;
 const ROLL_ANIMATION_DURATION = 650;
+const DICE_SIZE = 64;
+const DICE_GAP = 12;
+const DICE_COLUMNS = 5;
+const DICE_COUNT_PRESETS = [1, 2, 3, 4, 5, 10] as const;
 
 export const rollDie = (sides: number): number => {
   if (!Number.isInteger(sides) || sides < 2) {
@@ -52,7 +65,6 @@ type LastRoll = {
   sides: DiceSides;
   count: number;
   results: number[];
-  total: number;
 };
 
 type DragState = {
@@ -70,7 +82,6 @@ type RollAnimation = {
   sides: DiceSides;
   count: number;
   results: number[];
-  total: number;
   clientX: number;
   clientY: number;
 };
@@ -90,11 +101,27 @@ export const formatDiceRoll = (
   sides: DiceSides,
   results: readonly number[],
 ) => {
-  const total = results.reduce((sum, result) => sum + result, 0);
   if (results.length === 1) {
-    return `d${sides}: ${total}`;
+    return `d${sides}: ${results[0]}`;
   }
-  return `d${sides} × ${results.length}: [${results.join(" + ")}] = ${total}`;
+  return `d${sides} × ${results.length}: ${results.join(" · ")}`;
+};
+
+const createDieSvg = (
+  sides: DiceSides,
+  result: number,
+  accentColor: string,
+  isDarkTheme: boolean,
+) => {
+  const backgroundColor = isDarkTheme ? "#2f2f2f" : "#ffffff";
+  const textColor = isDarkTheme ? "#f5f5f5" : "#1f2937";
+  const resultFontSize = result >= 100 ? 16 : result >= 10 ? 20 : 24;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${DICE_SIZE}" height="${DICE_SIZE}" viewBox="0 0 ${DICE_SIZE} ${DICE_SIZE}">
+    <rect x="3" y="3" width="58" height="58" rx="15" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3"/>
+    <text x="32" y="38" text-anchor="middle" font-family="Arial, sans-serif" font-size="${resultFontSize}" font-weight="700" fill="${textColor}">${result}</text>
+    <text x="32" y="53" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" font-weight="600" fill="${accentColor}">d${sides}</text>
+  </svg>`;
 };
 
 export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
@@ -124,30 +151,56 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         },
         appState,
       );
-      const resultElement = newTextElement({
-        x: scenePoint.x,
-        y: scenePoint.y,
-        text: formatDiceRoll(roll.sides, roll.results),
-        fontSize: 24,
-        fontFamily: appState.currentItemFontFamily,
-        textAlign: "center",
-        verticalAlign: "middle",
-        strokeColor: appState.currentItemStrokeColor,
-        backgroundColor: "transparent",
-        customData: {
-          diceRoll: {
-            sides: roll.sides,
-            count: roll.count,
-            results: roll.results,
-            total: roll.total,
+      const columns = Math.min(roll.results.length, DICE_COLUMNS);
+      const rows = Math.ceil(roll.results.length / columns);
+      const boardWidth = columns * DICE_SIZE + (columns - 1) * DICE_GAP;
+      const boardHeight = rows * DICE_SIZE + (rows - 1) * DICE_GAP;
+      const files: BinaryFileData[] = [];
+      const resultElements = roll.results.map((result, index) => {
+        const fileId = randomId() as FileId;
+        const fileData: BinaryFileData = {
+          id: fileId,
+          dataURL: getDataURL_sync(
+            createDieSvg(
+              roll.sides,
+              result,
+              appState.currentItemStrokeColor,
+              appState.theme === "dark",
+            ),
+            MIME_TYPES.svg,
+          ),
+          mimeType: MIME_TYPES.svg,
+          created: Date.now(),
+        };
+        files.push(fileData);
+
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        return newImageElement({
+          type: "image",
+          x: scenePoint.x - boardWidth / 2 + column * (DICE_SIZE + DICE_GAP),
+          y: scenePoint.y - boardHeight / 2 + row * (DICE_SIZE + DICE_GAP),
+          width: DICE_SIZE,
+          height: DICE_SIZE,
+          fileId,
+          status: "saved",
+          customData: {
+            diceRoll: {
+              sides: roll.sides,
+              count: roll.count,
+              result,
+              index,
+            },
           },
-        },
+        });
       });
+
+      excalidrawAPI.addFiles(files);
 
       // updateScene triggers App.onChange, which broadcasts the result to all
       // collaborators through the existing collaboration channel.
       excalidrawAPI.updateScene({
-        elements: [...sceneElements, resultElement],
+        elements: [...sceneElements, ...resultElements],
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       });
     },
@@ -161,7 +214,6 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         sides,
         count,
         results,
-        total: results.reduce((sum, result) => sum + result, 0),
         clientX,
         clientY,
       };
@@ -354,6 +406,25 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
                           +
                         </button>
                       </div>
+                      <div className="dice-roller__quantity-presets">
+                        {DICE_COUNT_PRESETS.map((preset) => (
+                          <button
+                            className={preset === count ? "is-selected" : ""}
+                            key={preset}
+                            type="button"
+                            aria-label={`Выбрать ${preset} кубик(а) d${sides}`}
+                            aria-pressed={preset === count}
+                            onClick={() =>
+                              setDiceCounts((current) => ({
+                                ...current,
+                                [sides]: preset,
+                              }))
+                            }
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
                       <small>Потяните кубик на холст</small>
                     </div>
                   )}
@@ -364,10 +435,16 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
 
           <div className="dice-roller__result" aria-live="polite">
             {lastRoll ? (
-              <>
-                <span>{formatDiceRoll(lastRoll.sides, lastRoll.results)}</span>
-                <strong>{lastRoll.total}</strong>
-              </>
+              <div className="dice-roller__last-roll">
+                <span className="dice-roller__last-roll-label">
+                  d{lastRoll.sides} · {lastRoll.count} шт.
+                </span>
+                <div className="dice-roller__last-roll-values">
+                  {lastRoll.results.map((result, index) => (
+                    <span key={`${result}-${index}`}>{result}</span>
+                  ))}
+                </div>
+              </div>
             ) : (
               "Наведите на кубик и задайте количество"
             )}
