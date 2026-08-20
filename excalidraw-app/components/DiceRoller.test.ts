@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DICE_SIDES, rollDie } from "./DiceRoller";
+import { DICE_SIDES, formatDiceRoll, rollDie } from "./DiceRoller";
 
 describe("DiceRoller", () => {
   it("contains the standard RPG dice", () => {
@@ -20,5 +20,9 @@ describe("DiceRoller", () => {
   it("rejects invalid dice sizes", () => {
     expect(() => rollDie(1)).toThrow();
     expect(() => rollDie(2.5)).toThrow();
+  });
+
+  it("formats a multi-dice result for the canvas", () => {
+    expect(formatDiceRoll(4, [1, 3, 4])).toBe("d4 × 3: [1 + 3 + 4] = 8");
   });
 });
