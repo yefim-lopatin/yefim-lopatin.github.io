@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Генератор ходов ведущего для Погони за приключениями. Мягкие и жёсткие ходы, подсказки для выбранных классов.">
+  <meta name="theme-color" content="#f4f2e9">
+  <title>Ход ведущего · Погоня за приключениями</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="page">
+    <header><a href="/">← Все проекты</a><span>ПОГОНЯ ЗА ПРИКЛЮЧЕНИЯМИ</span></header>
+    <main>
+      <div class="intro"><span class="eyebrow">ПОМОЩНИК ЗА ИГРОВЫМ СТОЛОМ</span><h1>Что случится<br><em>дальше?</em></h1><p>Один ход, чтобы сдвинуть сцену.<br>Подставьте знакомые детали и передайте слово героям.</p></div>
+      <div class="workspace">
+        <section class="generator" aria-label="Генератор ходов">
+          <fieldset class="modes"><legend>Каким будет ход?</legend><div class="segments">
+            <label><input type="radio" name="mode" value="soft" checked><span>Мягким</span></label>
+            <label><input type="radio" name="mode" value="hard"><span>Жёстким</span></label>
+            <label><input type="radio" name="mode" value="auto"><span>Любым</span></label>
+          </div></fieldset>
+          <p id="mode-help" class="hint">Угроза ещё впереди. У героев есть время вмешаться.</p>
+          <div id="result" aria-live="polite" aria-atomic="true">
+            <article class="move-card"><div class="card-top"><span id="badge" class="badge">Мягкий ход</span><span id="counter" class="counter"></span></div><h2 id="move-title">Начните с одного хода</h2><p id="move-text">Нажмите кнопку ниже — здесь появится подсказка для текущей сцены.</p><p id="move-note" class="note"></p><div class="question">Что ты делаешь? <span aria-hidden="true">↗</span></div></article>
+            <article id="class-card" class="class-card" hidden><span class="eyebrow">ДОПОЛНИТЕЛЬНО ДЛЯ ГЕРОЯ</span><h3 id="class-title"></h3><p id="class-text"></p><small>Авторская подсказка. Применяйте, если она подходит к герою и сцене.</small></article>
+          </div>
+          <div class="actions"><button id="generate" class="primary" type="button">Новый ход <span aria-hidden="true">↻</span></button><button id="copy" type="button" disabled>Скопировать</button></div>
+          <p id="status" class="status" role="status"></p>
+          <noscript><p>Для генерации включите JavaScript в настройках браузера.</p></noscript>
+        </section>
+        <aside>
+          <fieldset class="party"><legend>Кто за столом?</legend><p>Отметьте классы героев. К обычному ходу добавится подсказка для одного из них.</p><div id="classes" class="class-grid"></div><button id="clear" type="button" class="text-button">Снять выбор</button><p id="saved" class="hint">Выбор сохраняется в этом браузере.</p></fieldset>
+          <details class="guide"><summary>Как использовать ходы</summary><p>Выберите подходящую деталь текущей сцены: героя, предмет, препятствие или действующую угрозу. Опишите изменение и спросите героя, что он делает.</p><p><strong>Мягкий:</strong> оставляет возможность отреагировать. Это также может быть вопрос, возможность или передышка.</p><p><strong>Жёсткий:</strong> последствие уже случилось. Применяйте его, когда это следует из результата хода, проигнорированной угрозы или беззащитного положения героя. Жёсткий не означает максимально жестокий.</p><p>Случайная подсказка не учитывает события игры. Если она не подходит, возьмите следующую. Сохраняйте решения игроков и договорённости вашей группы.</p></details>
+        </aside>
+      </div>
+    </main>
+    <footer><span>Ходы ведущего · Chasing Adventure</span><span>Неофициальный инструмент · Авторские формулировки по мотивам раздела «Ходы ведущего» и подготовленного генератора.</span></footer>
+  </div>
+</body>
+</html>

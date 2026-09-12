@@ -42,7 +42,8 @@ jobs:
         run: |
           mkdir -p _site/excalidraw
           cp -R excalidraw-app/build/. _site/excalidraw/
-          cp site/index.html _site/index.html
+          cp -R site/. _site/
+          printf '%s\n' "$GITHUB_SHA" > _site/version.txt
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
