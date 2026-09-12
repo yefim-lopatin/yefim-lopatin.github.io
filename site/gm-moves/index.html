@@ -7,13 +7,13 @@
   <meta name="theme-color" content="#f4f2e9">
   <title>Ход ведущего · Погоня за приключениями</title>
   <link rel="stylesheet" href="./style.css">
-  <script src="./app.js" defer></script>
+  <script src="./app.js?v=20260912-concrete" defer></script>
 </head>
 <body>
   <div class="page">
     <header><a href="/">← Все проекты</a><span>ПОГОНЯ ЗА ПРИКЛЮЧЕНИЯМИ</span></header>
     <main>
-      <div class="intro"><span class="eyebrow">ПОМОЩНИК ЗА ИГРОВЫМ СТОЛОМ</span><h1>Что случится<br><em>дальше?</em></h1><p>Один ход, чтобы сдвинуть сцену.<br>Подставьте знакомые детали и передайте слово героям.</p></div>
+      <div class="intro"><span class="eyebrow">ПОМОЩНИК ЗА ИГРОВЫМ СТОЛОМ</span><h1>Что случится<br><em>дальше?</em></h1><p>Готовая реплика для вашей сцены.<br>Прочитайте её игроку, заменив детали при необходимости.</p></div>
       <div class="workspace">
         <section class="generator" aria-label="Генератор ходов">
           <fieldset class="modes"><legend>Каким будет ход?</legend><div class="segments">
@@ -23,7 +23,7 @@
           </div></fieldset>
           <p id="mode-help" class="hint">Угроза ещё впереди. У героев есть время вмешаться.</p>
           <div id="result" aria-live="polite" aria-atomic="true">
-            <article class="move-card"><div class="card-top"><span id="badge" class="badge">Мягкий ход</span><span id="counter" class="counter"></span></div><h2 id="move-title">Начните с одного хода</h2><p id="move-text">Нажмите кнопку ниже — здесь появится подсказка для текущей сцены.</p><p id="move-note" class="note"></p><div class="question">Что ты делаешь? <span aria-hidden="true">↗</span></div></article>
+            <article class="move-card"><div class="card-top"><span id="badge" class="badge">Мягкий ход</span><span id="counter" class="counter"></span></div><h2 id="move-title">Начните с одного хода</h2><p id="move-text">Нажмите кнопку ниже — здесь появится готовая реплика для текущей сцены.</p><p id="move-note" class="note"></p><div class="question">Что ты делаешь? <span aria-hidden="true">↗</span></div></article>
             <article id="class-card" class="class-card" hidden><span class="eyebrow">ДОПОЛНИТЕЛЬНО ДЛЯ ГЕРОЯ</span><h3 id="class-title"></h3><p id="class-text"></p><small>Авторская подсказка. Применяйте, если она подходит к герою и сцене.</small></article>
           </div>
           <div class="actions"><button id="generate" class="primary" type="button">Новый ход <span aria-hidden="true">↻</span></button><button id="copy" type="button" disabled>Скопировать</button></div>
