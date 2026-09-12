@@ -256,9 +256,41 @@ const archetypes = {
   ]
 };
 
+// Наборы соответствуют индексам реплик soft/hard. Это детали описания,
+// а не новые события: их исход задаётся мягкостью или жёсткостью самой реплики.
+const detailPools = {
+  "Нанести состояния": [
+    ["Обманный замах", "Удар со слепой стороны", "Резкий выпад вблизи", "Отвлечение перед ударом", "Скрытое в ладони оружие", "Использование бреши в защите"],
+    ["Острые шипы на стене", "Осколки под ногами", "Торчащие из досок гвозди", "Падающие с потолка камни", "Раскалённая поверхность", "Острые края обломков"],
+    ["Дым от тлеющих вещей", "Облако едкой пыли", "Испарения из трещины", "Густой дым у выхода", "Раздражающие дыхание споры", "Пары разлитой жидкости"],
+    ["Скользкий камень", "Крошащийся край уступа", "Прогнившая доска", "Сыпучая земля под ногами", "Покрытая льдом ступень", "Подломившаяся опора"]
+  ],
+  "Отбросить или связать": [
+    ["Подсечка", "Толчок плечом", "Рывок за одежду", "Удар щитом", "Скользкая опора под ногами", "Захват ноги"],
+    ["Хватка за запястье", "Прижатая к стене рука", "Петля на одежде", "Захват со спины", "Сдавленные в тесноте плечи", "Зажатый под тяжестью плащ"]
+  ],
+  "Изменить окружение": [
+    ["Просевший потолок", "Обломки поперёк прохода", "Поток воды на пути", "Глубокая трещина", "Покосившаяся опора", "Осыпавшаяся земля"],
+    ["Густой туман", "Поднятая ветром пыль", "Плотная завеса дождя", "Клубы дыма", "Тени от тусклого света", "Снег, застилающий обзор"]
+  ],
+  "Поставить перед немедленной угрозой": [
+    ["Враг за спиной союзника", "Оружие, взятое на прицел", "Скрытый замах", "Отвлечённое внимание союзника", "Слишком малая дистанция", "Незамеченный обход сбоку"],
+    ["Огонь у края вещи", "Надорванный ремень", "Край глубокого провала", "Подступающая вода", "Тлеющая упаковка", "Неустойчивая поверхность"]
+  ],
+  "Отнять": [
+    ["Удар по кисти", "Рывок за ремень", "Раскрывшаяся застёжка", "Скользкая рукоять", "Зацепившаяся одежда", "Резкое столкновение"],
+    ["Страх за близких", "Неисполненное обещание", "Ссора из-за платы", "Неприемлемый риск", "Срочное личное дело", "Потерянное доверие"]
+  ],
+  "Обратить против них": [
+    ["Звон снаряжения", "Эхо удара", "Скрип под тяжестью", "Треск сломанной преграды", "Шум спешки", "Слишком громкий разговор"],
+    ["Повторяющийся замах", "Предсказуемое отступление", "Открытый бок", "Неудобная опора", "Привычка смотреть на оружие", "Замедление после выпада"]
+  ]
+};
+
 const $ = (id) => document.getElementById(id);
 const storageKey = "gm-moves.preferences.v1";
 let selected = [];
+let selectedMoves = [];
 let mode = "soft";
 let previous = "";
 let previousClass = "";
@@ -269,22 +301,44 @@ const choose = (items) => items[Math.floor(Math.random() * items.length)];
 try {
   const prefs = JSON.parse(localStorage.getItem(storageKey) || "{}");
   if (Array.isArray(prefs.classes)) selected = [...new Set(prefs.classes.filter((key) => Object.hasOwn(archetypes, key)))];
+  if (Array.isArray(prefs.moveTypes)) selectedMoves = [...new Set(prefs.moveTypes.filter((name) => moves.some((move) => move.name === name)))];
   if (["soft", "hard", "auto"].includes(prefs.mode)) mode = prefs.mode;
 } catch { /* Значения по умолчанию работают и без доступа к хранилищу. */ }
 
 function save() {
+  $("filter-count").textContent = selectedMoves.length ? `Выбрано: ${selectedMoves.length} из ${moves.length}` : `Все ${moves.length}`;
   try {
-    localStorage.setItem(storageKey, JSON.stringify({classes: selected, mode}));
+    localStorage.setItem(storageKey, JSON.stringify({classes: selected, mode, moveTypes: selectedMoves}));
     $("saved").textContent = selected.length ? `Выбрано классов: ${selected.length}. Выбор сохранён.` : "Выбор сохраняется в этом браузере.";
+    $("filter-saved").textContent = "Выбор ходов сохранён в этом браузере.";
   } catch {
     $("saved").textContent = "Браузер не разрешает сохранение. Выбор действует до закрытия страницы.";
+    $("filter-saved").textContent = "Сохранение недоступно. Выбор действует до закрытия страницы.";
   }
 }
 
 function generate() {
-  const strength = mode === "auto" ? (Math.random() < 2 / 3 ? "soft" : "hard") : mode;
-  const pool = moves.flatMap((move) => move[strength].map((text) => ({move, text}))).filter((entry) => entry.text !== previous);
-  const entry = choose(pool);
+  const enabled = selectedMoves.length ? moves.filter((move) => selectedMoves.includes(move.name)) : moves;
+  const availableStrengths = ["soft", "hard"].filter((strength) => enabled.some((move) => move[strength].length));
+  const strength = mode === "auto"
+    ? (availableStrengths.length === 1 ? availableStrengths[0] : (Math.random() < 2 / 3 ? "soft" : "hard"))
+    : mode;
+  const pool = enabled.flatMap((move) => move[strength].map((text, variant) => ({move, text, variant})));
+  if (!pool.length) {
+    $("empty-result").hidden = false;
+    $("move-card").hidden = true;
+    $("class-card").hidden = true;
+    $("copy").disabled = true;
+    $("generate").disabled = true;
+    $("status").textContent = "";
+    copyText = "";
+    return;
+  }
+  $("empty-result").hidden = true;
+  $("move-card").hidden = false;
+  $("generate").disabled = false;
+  const fresh = pool.filter((entry) => entry.text !== previous);
+  const entry = choose(fresh.length ? fresh : pool);
   previous = entry.text;
   count += 1;
   const label = strength === "hard" ? "Жёсткий ход" : "Мягкий ход";
@@ -294,7 +348,21 @@ function generate() {
   $("move-title").textContent = entry.move.name;
   $("move-text").textContent = entry.text;
   $("move-note").textContent = entry.move.note;
-  copyText = `${label} · ${entry.move.name}\n\n${entry.text}\n\n${entry.move.note}\n\nЧто ты делаешь?`;
+  const candidates = [...(detailPools[entry.move.name]?.[entry.variant] || [])];
+  const details = [];
+  while (candidates.length && details.length < 4) {
+    details.push(candidates.splice(Math.floor(Math.random() * candidates.length), 1)[0]);
+  }
+  $("move-details").hidden = !details.length;
+  $("details-list").replaceChildren();
+  for (const detail of details) {
+    const item = document.createElement("li");
+    item.textContent = detail;
+    $("details-list").append(item);
+  }
+  copyText = `${label} · ${entry.move.name}\n\n${entry.text}`;
+  if (details.length) copyText += `\n\nДетали на выбор (одна для описания, без дополнительных последствий):\n${details.map((detail) => "- " + detail).join("\n")}`;
+  copyText += `\n\n${entry.move.note}\n\nЧто ты делаешь?`;
   $("class-card").hidden = !selected.length;
   if (selected.length) {
     const name = choose(selected.length > 1 ? selected.filter((key) => key !== previousClass) : selected);
@@ -315,6 +383,38 @@ function updateModeHelp() {
     auto: "Случайный режим: мягкие ходы выпадают чаще. Уместность решает ведущий."
   }[mode];
 }
+
+for (const move of moves) {
+  const label = document.createElement("label");
+  label.className = "class-choice";
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.value = move.name;
+  checkbox.checked = selectedMoves.includes(move.name);
+  checkbox.setAttribute("aria-label", move.name);
+  const title = document.createElement("span");
+  title.textContent = move.name;
+  if (!move.hard.length) {
+    const note = document.createElement("small");
+    note.className = "unavailable";
+    note.textContent = "Только мягкие варианты";
+    title.append(note);
+  }
+  checkbox.addEventListener("change", () => {
+    selectedMoves = [...document.querySelectorAll("#move-types input:checked")].map((input) => input.value);
+    save();
+    generate();
+  });
+  label.append(checkbox, title);
+  $("move-types").append(label);
+}
+
+$("clear-moves").addEventListener("click", () => {
+  selectedMoves = [];
+  document.querySelectorAll("#move-types input").forEach((input) => { input.checked = false; });
+  save();
+  generate();
+});
 
 for (const name of Object.keys(archetypes)) {
   const label = document.createElement("label");

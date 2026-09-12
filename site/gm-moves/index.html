@@ -6,8 +6,8 @@
   <meta name="description" content="Генератор ходов ведущего для Погони за приключениями. Мягкие и жёсткие ходы, подсказки для выбранных классов.">
   <meta name="theme-color" content="#f4f2e9">
   <title>Ход ведущего · Погоня за приключениями</title>
-  <link rel="stylesheet" href="./style.css">
-  <script src="./app.js?v=20260912-flexible" defer></script>
+  <link rel="stylesheet" href="./style.css?v=20260912-filters">
+  <script src="./app.js?v=20260912-filters" defer></script>
 </head>
 <body>
   <div class="page">
@@ -22,15 +22,17 @@
             <label><input type="radio" name="mode" value="auto"><span>Любым</span></label>
           </div></fieldset>
           <p id="mode-help" class="hint">Угроза ещё впереди. У героев есть время вмешаться.</p>
-          <div id="result" aria-live="polite" aria-atomic="true">
-            <article class="move-card"><div class="card-top"><span id="badge" class="badge">Мягкий ход</span><span id="counter" class="counter"></span></div><h2 id="move-title">Начните с одного хода</h2><p id="move-text">Нажмите кнопку ниже — здесь появится готовая реплика для текущей сцены.</p><p id="move-note" class="note"></p><div class="question">Что ты делаешь? <span aria-hidden="true">↗</span></div></article>
-            <article id="class-card" class="class-card" hidden><span class="eyebrow">ДОПОЛНИТЕЛЬНО ДЛЯ ГЕРОЯ</span><h3 id="class-title"></h3><p id="class-text"></p><small>Авторская подсказка. Применяйте, если она подходит к герою и сцене.</small></article>
-          </div>
           <div class="actions"><button id="generate" class="primary" type="button">Новый ход <span aria-hidden="true">↻</span></button><button id="copy" type="button" disabled>Скопировать</button></div>
           <p id="status" class="status" role="status"></p>
+          <div id="result" aria-live="polite" aria-atomic="true">
+            <article id="empty-result" class="move-card" hidden><h2>Нет подходящих ходов</h2><p>У выбранных типов нет жёстких вариантов. Выберите мягкий режим, «Любым» или добавьте другие типы ходов.</p></article>
+            <article id="move-card" class="move-card"><div class="card-top"><span id="badge" class="badge">Мягкий ход</span><span id="counter" class="counter"></span></div><h2 id="move-title">Начните с одного хода</h2><p id="move-text">Нажмите кнопку ниже — здесь появится готовая реплика для текущей сцены.</p><section id="move-details" class="move-details" aria-labelledby="details-title" hidden><h3 id="details-title">Детали на выбор</h3><p>Добавьте одну подходящую деталь к описанию. Это не дополнительные последствия.</p><ul id="details-list"></ul></section><p id="move-note" class="note"></p><div class="question">Что ты делаешь? <span aria-hidden="true">↗</span></div></article>
+            <article id="class-card" class="class-card" hidden><span class="eyebrow">ДОПОЛНИТЕЛЬНО ДЛЯ ГЕРОЯ</span><h3 id="class-title"></h3><p id="class-text"></p><small>Авторская подсказка. Применяйте, если она подходит к герою и сцене.</small></article>
+          </div>
           <noscript><p>Для генерации включите JavaScript в настройках браузера.</p></noscript>
         </section>
         <aside>
+          <details class="move-filter"><summary>Какие ходы генерировать? <span id="filter-count">Все 13</span></summary><fieldset><legend>Типы ходов</legend><p class="hint">Можно отметить несколько. Если ничего не выбрано, доступны все типы.</p><div id="move-types" class="move-types"></div><button id="clear-moves" type="button" class="text-button">Сбросить — все ходы</button><p id="filter-saved" class="hint">Выбор сохраняется в этом браузере.</p></fieldset></details>
           <fieldset class="party"><legend>Кто за столом?</legend><p>Отметьте классы героев. К обычному ходу добавится подсказка для одного из них.</p><div id="classes" class="class-grid"></div><button id="clear" type="button" class="text-button">Снять выбор</button><p id="saved" class="hint">Выбор сохраняется в этом браузере.</p></fieldset>
           <details class="guide"><summary>Как использовать ходы</summary><p>Выберите подходящую деталь текущей сцены: героя, предмет, препятствие или действующую угрозу. Опишите изменение и спросите героя, что он делает.</p><p><strong>Мягкий:</strong> оставляет возможность отреагировать. Это также может быть вопрос, возможность или передышка.</p><p><strong>Жёсткий:</strong> последствие уже случилось. Применяйте его, когда это следует из результата хода, проигнорированной угрозы или беззащитного положения героя. Жёсткий не означает максимально жестокий.</p><p>Случайная подсказка не учитывает события игры. Если она не подходит, возьмите следующую. Сохраняйте решения игроков и договорённости вашей группы.</p></details>
         </aside>
