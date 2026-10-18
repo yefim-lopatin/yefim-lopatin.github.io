@@ -22,7 +22,7 @@ export const getV5Symbol = (result: number, hunger: boolean) => {
 };
 
 export const getHungerCount = (sides: number, count: number, hunger: number) =>
-  sides === 10 ? Math.min(count, Math.max(0, Math.min(5, hunger))) : 0;
+  sides === 10 ? Math.min(count, Math.max(0, Math.min(10, hunger))) : 0;
 
 export const createV5DieSvg = (result: number, hunger: boolean) => {
   const symbol = getV5Symbol(result, hunger)

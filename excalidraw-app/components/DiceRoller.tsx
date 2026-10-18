@@ -9,22 +9,27 @@ import {
 import {
   CODES,
   KEYS,
-  randomId,
+  MIME_TYPES,
   isWritableElement,
+  randomId,
   viewportCoordsToSceneCoords,
 } from "@excalidraw/common";
-import { syncInvalidIndices } from "@excalidraw/element";
+import { newImageElement, syncInvalidIndices } from "@excalidraw/element";
 import { CaptureUpdateAction } from "@excalidraw/excalidraw";
 import { IconButton } from "@excalidraw/excalidraw/components/IconButton";
+import { getDataURL_sync } from "@excalidraw/excalidraw/data/blob";
 
-import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
+import type {
+  BinaryFileData,
+  ExcalidrawImperativeAPI,
+} from "@excalidraw/excalidraw/types";
+import type { FileId } from "@excalidraw/element/types";
 
 import { DiceIcon } from "./DiceIcons";
 import { DiceThrow } from "./DiceThrow";
-import { DICE_SIDES } from "./diceSvg";
-import { createDiceText } from "./diceText";
+import { DICE_SIDES, createDieSvg, getDieDimensions } from "./diceSvg";
 
-import { getHungerCount } from "./v5Dice";
+import { createV5DieSvg, getHungerCount } from "./v5Dice";
 
 import "./DiceRoller.scss";
 
@@ -35,6 +40,8 @@ export type { DiceSides } from "./diceSvg";
 
 const MAX_DICE_COUNT = 20;
 const DRAG_THRESHOLD = 6;
+const DICE_GAP = 12;
+const DICE_COLUMNS = 5;
 
 export const rollDie = (sides: number): number => {
   if (!Number.isInteger(sides) || sides < 2) {
@@ -73,7 +80,6 @@ type DragState = {
 };
 
 type RollAnimation = {
-  id: string;
   sides: DiceSides;
   count: number;
   hunger: number;
@@ -122,14 +128,65 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         },
         appState,
       );
-      const resultElements = createDiceText({
-        sides: roll.sides,
-        results: roll.results,
-        hunger: roll.hunger,
-        x: scenePoint.x,
-        y: scenePoint.y,
-        isDarkTheme: appState.theme === "dark",
+      const dieDimensions = getDieDimensions(roll.sides);
+      const columns = Math.min(roll.results.length, DICE_COLUMNS);
+      const rows = Math.ceil(roll.results.length / columns);
+      const boardWidth =
+        columns * dieDimensions.width + (columns - 1) * DICE_GAP;
+      const boardHeight = rows * dieDimensions.height + (rows - 1) * DICE_GAP;
+      const files: BinaryFileData[] = [];
+      const resultElements = roll.results.map((result, index) => {
+        const fileId = randomId() as FileId;
+        const fileData: BinaryFileData = {
+          id: fileId,
+          dataURL: getDataURL_sync(
+            roll.hunger > 0
+              ? createV5DieSvg(result, index < roll.hunger)
+              : createDieSvg(
+                  roll.sides,
+                  result,
+                  appState.currentItemStrokeColor,
+                  appState.theme === "dark",
+                ),
+            MIME_TYPES.svg,
+          ),
+          mimeType: MIME_TYPES.svg,
+          created: Date.now(),
+        };
+        files.push(fileData);
+
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        return newImageElement({
+          type: "image",
+          x:
+            scenePoint.x -
+            boardWidth / 2 +
+            column * (dieDimensions.width + DICE_GAP),
+          y:
+            scenePoint.y -
+            boardHeight / 2 +
+            row * (dieDimensions.height + DICE_GAP),
+          width: dieDimensions.width,
+          height: dieDimensions.height,
+          fileId,
+          status: "saved",
+          customData: {
+            diceRoll: {
+              renderer: 1,
+              isDarkTheme: appState.theme === "dark",
+              v5: roll.hunger > 0,
+              sides: roll.sides,
+              count: roll.count,
+              result,
+              index,
+              hunger: index < roll.hunger,
+            },
+          },
+        });
       });
+
+      excalidrawAPI.addFiles(files);
 
       // updateScene triggers App.onChange, which broadcasts the result to all
       // collaborators through the existing collaboration channel.
@@ -145,7 +202,6 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
     (sides: DiceSides, count: number, clientX: number, clientY: number) => {
       const results = Array.from({ length: count }, () => rollDie(sides));
       const roll = {
-        id: randomId(),
         sides,
         count,
         results,
@@ -418,19 +474,18 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
 
       {rollAnimation && (
         <DiceThrow
-          key={rollAnimation.id}
           sides={rollAnimation.sides}
           count={rollAnimation.count}
           hunger={rollAnimation.hunger}
           clientX={rollAnimation.clientX}
           clientY={rollAnimation.clientY}
-          onResult={({ results }) => {
+          onComplete={({ results }) => {
             addRollToCanvas({
               ...rollAnimation,
               results: results.length ? results : rollAnimation.results,
             });
+            setRollAnimation(null);
           }}
-          onComplete={() => setRollAnimation(null)}
         />
       )}
     </div>

@@ -21,25 +21,14 @@ import {
 
 vi.mock("./DiceThrow", () => ({
   DiceThrow: ({
-    onResult,
     onComplete,
   }: {
-    onResult: (result: { results: number[] }) => void;
     onComplete: (result: { results: number[] }) => void;
   }) =>
     createElement(
-      "div",
-      null,
-      createElement(
-        "button",
-        { onClick: () => onResult({ results: [12] }) },
-        "Определить тестовый результат",
-      ),
-      createElement(
-        "button",
-        { onClick: () => onComplete({ results: [12] }) },
-        "Завершить тестовый бросок",
-      ),
+      "button",
+      { onClick: () => onComplete({ results: [12] }) },
+      "Завершить тестовый бросок",
     ),
 }));
 
@@ -92,22 +81,13 @@ describe("DiceRoller", () => {
     pointer(window, "pointermove", 250, 350);
     pointer(window, "pointerup", 250, 350);
     fireEvent.click(
-      screen.getByRole("button", { name: "Определить тестовый результат" }),
+      screen.getByRole("button", { name: "Завершить тестовый бросок" }),
     );
     const { elements } = updateScene.mock.calls[0][0];
     expect(
       elements.find((element) => element.id === deleted.id)?.isDeleted,
     ).toBe(true);
     expect(elements.filter((element) => !element.isDeleted)).toHaveLength(1);
-    expect(elements.find((element) => !element.isDeleted)?.type).toBe("text");
-    expect(excalidrawAPI.addFiles).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole("button", { name: "Завершить тестовый бросок" }),
-    ).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Завершить тестовый бросок" }),
-    );
-    expect(updateScene).toHaveBeenCalledTimes(1);
     expect(getSceneVersion(elements)).toBeGreaterThan(
       getSceneVersion([deleted]),
     );
