@@ -26,6 +26,7 @@ import type {
 import type { FileId } from "@excalidraw/element/types";
 
 import { DiceIcon, MDI_DICE_ICONS } from "./DiceIcons";
+import { DiceThrow } from "./DiceThrow";
 
 import "./DiceRoller.scss";
 
@@ -35,7 +36,6 @@ export type DiceSides = typeof DICE_SIDES[number];
 
 const MAX_DICE_COUNT = 20;
 const DRAG_THRESHOLD = 6;
-const ROLL_ANIMATION_DURATION = 650;
 const DICE_SIZE = 64;
 const DICE_GAP = 12;
 const DICE_COLUMNS = 5;
@@ -219,7 +219,6 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
     null,
   );
   const dragStateRef = useRef<DragState | null>(null);
-  const rollTimerRef = useRef<number | null>(null);
   const diceRollerRef = useRef<HTMLDivElement | null>(null);
 
   const addRollToCanvas = useCallback(
@@ -312,17 +311,9 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         clientY,
       };
 
-      if (rollTimerRef.current !== null) {
-        window.clearTimeout(rollTimerRef.current);
-      }
       setRollAnimation(roll);
-      rollTimerRef.current = window.setTimeout(() => {
-        addRollToCanvas(roll);
-        setRollAnimation(null);
-        rollTimerRef.current = null;
-      }, ROLL_ANIMATION_DURATION);
     },
-    [addRollToCanvas],
+    [],
   );
 
   useEffect(() => {
@@ -382,14 +373,6 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
       window.removeEventListener("pointercancel", cancelDrag);
     };
   }, [startRollAtPoint]);
-
-  useEffect(() => {
-    return () => {
-      if (rollTimerRef.current !== null) {
-        window.clearTimeout(rollTimerRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     document.body.classList.toggle(
@@ -598,25 +581,19 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
       )}
 
       {rollAnimation && (
-        <div
-          className="dice-roller__roll-animation"
-          style={{ left: rollAnimation.clientX, top: rollAnimation.clientY }}
-          aria-live="polite"
-          aria-label="Кубики бросаются"
-        >
-          <div className="dice-roller__rolling-dice">
-            {rollAnimation.results.map((_, index) => (
-              <span
-                className="dice-roller__rolling-die"
-                key={index}
-                style={{ animationDelay: `${Math.min(index * 35, 180)}ms` }}
-              >
-                <DiceIcon sides={rollAnimation.sides} />
-              </span>
-            ))}
-          </div>
-          <span className="dice-roller__rolling-label">Бросок…</span>
-        </div>
+        <DiceThrow
+          sides={rollAnimation.sides}
+          count={rollAnimation.count}
+          clientX={rollAnimation.clientX}
+          clientY={rollAnimation.clientY}
+          onComplete={({ results }) => {
+            addRollToCanvas({
+              ...rollAnimation,
+              results: results.length ? results : rollAnimation.results,
+            });
+            setRollAnimation(null);
+          }}
+        />
       )}
     </div>
   );
