@@ -54,6 +54,10 @@ import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
 
 import { appJotaiStore, atom } from "../app-jotai";
 import {
+  isReconstructableDie,
+  reconstructDiceFiles,
+} from "../components/diceFiles";
+import {
   CURSOR_SYNC_TIMEOUT,
   FILE_UPLOAD_MAX_BYTES,
   FIREBASE_STORAGE_PREFIXES,
@@ -427,6 +431,16 @@ class Collab extends PureComponent<CollabProps, CollabState> {
     }
   };
 
+  private restoreDiceFiles = (elements: readonly ExcalidrawElement[]) => {
+    const diceFiles = reconstructDiceFiles(
+      elements,
+      this.excalidrawAPI.getFiles(),
+    );
+    if (diceFiles.length) {
+      this.excalidrawAPI.addFiles(diceFiles);
+    }
+  };
+
   private fetchImageFilesFromFirebase = async (opts: {
     elements: readonly ExcalidrawElement[];
     /**
@@ -438,10 +452,12 @@ class Collab extends PureComponent<CollabProps, CollabState> {
      */
     forceFetchFiles?: boolean;
   }) => {
+    this.restoreDiceFiles(opts.elements);
     const unfetchedImages = opts.elements
       .filter((element) => {
         return (
           isInitializedImageElement(element) &&
+          !isReconstructableDie(element) &&
           !this.fileManager.isFileTracked(element.fileId) &&
           !element.isDeleted &&
           (opts.forceFetchFiles
@@ -810,6 +826,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
   private handleRemoteSceneUpdate = (
     elements: ReconciledExcalidrawElement[],
   ) => {
+    this.restoreDiceFiles(elements);
     this.excalidrawAPI.updateScene({
       elements,
       captureUpdate: CaptureUpdateAction.NEVER,

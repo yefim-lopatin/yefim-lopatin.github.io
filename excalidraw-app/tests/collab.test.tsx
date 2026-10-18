@@ -3,7 +3,7 @@ import {
   createRedoAction,
   createUndoAction,
 } from "@excalidraw/excalidraw/actions/actionHistory";
-import { syncInvalidIndices } from "@excalidraw/element";
+import { newImageElement, syncInvalidIndices } from "@excalidraw/element";
 import { API } from "@excalidraw/excalidraw/tests/helpers/api";
 import { act, render, waitFor } from "@excalidraw/excalidraw/tests/test-utils";
 import { vi } from "vitest";
@@ -11,8 +11,15 @@ import { vi } from "vitest";
 import { StoreIncrement } from "@excalidraw/element";
 
 import type { DurableIncrement, EphemeralIncrement } from "@excalidraw/element";
+import type { FileId } from "@excalidraw/element/types";
+import type { ReconciledExcalidrawElement } from "@excalidraw/excalidraw/data/reconcile";
+import type {
+  BinaryFiles,
+  ExcalidrawImperativeAPI,
+} from "@excalidraw/excalidraw/types";
 
 import ExcalidrawApp from "../App";
+import Collab from "../collab/Collab";
 
 const { h } = window;
 
@@ -69,6 +76,57 @@ vi.mock("socket.io-client", () => {
  * i.e. multiplayer history tests could be a good first candidate, as we could test both history stacks simultaneously.
  */
 describe("collaboration", () => {
+  it("restores received dice before rendering without downloading image files", async () => {
+    const files: BinaryFiles = {};
+    const elements = syncInvalidIndices([
+      newImageElement({
+        type: "image",
+        x: 0,
+        y: 0,
+        width: 64,
+        height: 64,
+        fileId: "remote-die" as FileId,
+        status: "saved",
+        customData: {
+          diceRoll: {
+            renderer: 1,
+            sides: 10,
+            result: 10,
+            isDarkTheme: false,
+            v5: true,
+            hunger: true,
+          },
+        },
+      }),
+    ]);
+    const updateScene = vi.fn(() => {
+      expect(files["remote-die"]).toBeDefined();
+    });
+    const excalidrawAPI = {
+      getFiles: () => files,
+      getSceneElementsIncludingDeleted: () => elements,
+      addFiles: (addedFiles: BinaryFiles[string][]) => {
+        for (const file of addedFiles) {
+          files[file.id] = file;
+        }
+      },
+      updateScene,
+    } as unknown as ExcalidrawImperativeAPI;
+    const collab = new Collab({ excalidrawAPI });
+    const getFiles = vi.spyOn(collab.fileManager, "getFiles");
+
+    // eslint-disable-next-line dot-notation
+    collab["handleRemoteSceneUpdate"](
+      elements as ReconciledExcalidrawElement[],
+    );
+
+    expect(updateScene).toHaveBeenCalledTimes(1);
+    expect(getFiles).toHaveBeenCalledWith([]);
+    await Promise.resolve();
+    // eslint-disable-next-line dot-notation
+    collab["loadImageFiles"].cancel();
+  });
+
   it("should emit two ephemeral increments even though updates get batched", async () => {
     const durableIncrements: DurableIncrement[] = [];
     const ephemeralIncrements: EphemeralIncrement[] = [];

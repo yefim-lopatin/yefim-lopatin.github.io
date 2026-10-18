@@ -27,23 +27,21 @@ import type { FileId } from "@excalidraw/element/types";
 
 import { DiceIcon } from "./DiceIcons";
 import { DiceThrow } from "./DiceThrow";
-import { BOARD_DICE, drawBoardDie } from "./BoardDice";
+import { DICE_SIDES, createDieSvg, getDieDimensions } from "./diceSvg";
+
 import { createV5DieSvg, getHungerCount } from "./v5Dice";
 
 import "./DiceRoller.scss";
 
-export const DICE_SIDES = [2, 4, 6, 8, 10, 12, 20, 100] as const;
+import type { DiceSides } from "./diceSvg";
 
-export type DiceSides = typeof DICE_SIDES[number];
+export { DICE_SIDES, createDieSvg, getDieDimensions } from "./diceSvg";
+export type { DiceSides } from "./diceSvg";
 
 const MAX_DICE_COUNT = 20;
 const DRAG_THRESHOLD = 6;
-const DICE_SIZE = 64;
 const DICE_GAP = 12;
 const DICE_COLUMNS = 5;
-const PERCENTILE_DICE_WIDTH = 116;
-const RESULT_TEXT_COLOR = "#000000";
-const RESULT_TEXT_OUTLINE = "#ffffff";
 
 export const rollDie = (sides: number): number => {
   if (!Number.isInteger(sides) || sides < 2) {
@@ -100,66 +98,6 @@ const createInitialDiceCounts = (): Record<DiceSides, number> => ({
   20: 1,
   100: 1,
 });
-
-export const getDieDimensions = (sides: DiceSides) => ({
-  width: sides === 100 ? PERCENTILE_DICE_WIDTH : DICE_SIZE,
-  height: DICE_SIZE,
-});
-
-const createValueSvg = (
-  value: string | number,
-  x: number,
-  y: number,
-  fontSize: number,
-  textColor: string,
-  backgroundColor: string,
-) =>
-  `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="700" fill="${textColor}" stroke="${backgroundColor}" stroke-width="5" stroke-linejoin="round" style="paint-order: stroke">${value}</text>`;
-
-export const createDieSvg = (
-  sides: DiceSides,
-  result: number,
-  _accentColor: string,
-  isDarkTheme: boolean,
-) => {
-  const paper = isDarkTheme ? "#252529" : "#ffffff";
-  const ink = isDarkTheme ? "#e6e6eb" : "#363636";
-  const { width, height } = getDieDimensions(sides);
-  const value = (number: string | number, x: number, y: number, size = 17) =>
-    createValueSvg(number, x, y, size, RESULT_TEXT_COLOR, RESULT_TEXT_OUTLINE);
-  let shape: string;
-  if (sides === 2) {
-    shape = `<g data-die-shape="coin"><circle cx="32" cy="32" r="28" fill="${paper}" stroke="${ink}" stroke-width="2"/>${value(
-      result,
-      32,
-      33,
-    )}</g>`;
-  } else if (sides === 100) {
-    const tens =
-      result === 100
-        ? "00"
-        : String(Math.floor(result / 10) * 10).padStart(2, "0");
-    shape = `<g data-die-shape="percentile-pair"><g transform="scale(.9)">${drawBoardDie(
-      10,
-      ink,
-      paper,
-    )}${value(
-      tens,
-      32,
-      26,
-    )}</g><g transform="translate(58 0) scale(.9)">${drawBoardDie(
-      10,
-      ink,
-      paper,
-    )}${value(result === 100 ? 0 : result % 10, 32, 26)}</g></g>`;
-  } else {
-    const die = BOARD_DICE[sides];
-    shape =
-      drawBoardDie(sides, ink, paper) +
-      value(result, die.x, die.y, sides === 6 ? 14 : 17);
-  }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${shape}</svg>`;
-};
 
 export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -229,9 +167,12 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
           width: dieDimensions.width,
           height: dieDimensions.height,
           fileId,
-          status: "pending",
+          status: "saved",
           customData: {
             diceRoll: {
+              renderer: 1,
+              isDarkTheme: appState.theme === "dark",
+              v5: roll.hunger > 0,
               sides: roll.sides,
               count: roll.count,
               result,

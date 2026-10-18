@@ -13,6 +13,7 @@ import type {
 
 import { WS_EVENTS, FILE_UPLOAD_TIMEOUT, WS_SUBTYPES } from "../app_constants";
 import { isSyncableElement } from "../data";
+import { isReconstructableDie } from "../components/diceFiles";
 
 import type {
   SocketUpdateData,
@@ -104,7 +105,9 @@ class Portal {
   queueFileUpload = throttle(async () => {
     try {
       await this.collab.fileManager.saveFiles({
-        elements: this.collab.excalidrawAPI.getSceneElementsIncludingDeleted(),
+        elements: this.collab.excalidrawAPI
+          .getSceneElementsIncludingDeleted()
+          .filter((element) => !isReconstructableDie(element)),
         files: this.collab.excalidrawAPI.getFiles(),
       });
     } catch (error: any) {
