@@ -3,6 +3,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { BOARD_DICE } from "./BoardDice";
+import { getHungerCount, getV5Symbol, createV5DieSvg } from "./v5Dice";
 import { DiceIcon, MDI_DICE_ICONS, isMdiDiceSides } from "./DiceIcons";
 import {
   DICE_SIDES,
@@ -55,7 +57,7 @@ describe("DiceRoller", () => {
       expect(visibleTexts.some((text) => text.startsWith("d"))).toBe(false);
       expect(svg).toContain('fill="#000000"');
       if (isMdiDiceSides(sides)) {
-        expect(svg).toContain(MDI_DICE_ICONS[sides].outlinePath);
+        expect(svg).toContain(BOARD_DICE[sides].outline);
       }
     }
   });
@@ -102,6 +104,52 @@ describe("DiceRoller", () => {
 
     fireEvent.pointerDown(document.body);
     expect(screen.queryByRole("dialog", { name: "Кубики" })).toBeNull();
+  });
+
+  it("keeps quantity controls visible and limits Hunger to five", () => {
+    render(createElement(DiceRoller, { excalidrawAPI: null }));
+    fireEvent.keyDown(window, { key: "d", code: "KeyD" });
+    for (const sides of DICE_SIDES) {
+      expect(
+        screen.getByRole("button", { name: `Увеличить количество d${sides}` }),
+      ).toBeTruthy();
+    }
+    fireEvent.click(
+      screen.getByRole("button", { name: "Увеличить количество d10" }),
+    );
+    expect(
+      screen.getByRole("button", {
+        name: "Перетащить 2 кубик(а) d10 на холст",
+      }),
+    ).toBeTruthy();
+    const increase = screen.getByRole("button", {
+      name: "Увеличить кубики голода",
+    });
+    for (let i = 0; i < 7; i++) {
+      fireEvent.click(increase);
+    }
+    expect(screen.getByLabelText("Кубики голода").textContent).toBe("5");
+    expect(increase.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("replaces only d10s with Hunger dice and maps all V5 faces", () => {
+    expect(getHungerCount(10, 5, 0)).toBe(0);
+    expect(getHungerCount(10, 2, 5)).toBe(2);
+    expect(getHungerCount(20, 5, 3)).toBe(0);
+    expect(getV5Symbol(1, true)).not.toBe(getV5Symbol(2, true));
+    expect(getV5Symbol(2, true)).toBe(getV5Symbol(5, true));
+    expect(getV5Symbol(6, true)).toBe(getV5Symbol(9, true));
+    expect(getV5Symbol(10, true)).not.toBe(getV5Symbol(9, true));
+    expect(getV5Symbol(1, false)).toBe(getV5Symbol(5, false));
+    for (const hunger of [false, true]) {
+      for (let result = 1; result <= 10; result++) {
+        const doc = new DOMParser().parseFromString(
+          createV5DieSvg(result, hunger),
+          "image/svg+xml",
+        );
+        expect(doc.querySelector("parsererror")).toBeNull();
+      }
+    }
   });
 
   it("shows a die preview and grabbing cursor while dragging", async () => {

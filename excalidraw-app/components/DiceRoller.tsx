@@ -25,8 +25,10 @@ import type {
 } from "@excalidraw/excalidraw/types";
 import type { FileId } from "@excalidraw/element/types";
 
-import { DiceIcon, MDI_DICE_ICONS } from "./DiceIcons";
+import { DiceIcon } from "./DiceIcons";
 import { DiceThrow } from "./DiceThrow";
+import { BOARD_DICE, drawBoardDie } from "./BoardDice";
+import { createV5DieSvg, getHungerCount } from "./v5Dice";
 
 import "./DiceRoller.scss";
 
@@ -39,11 +41,9 @@ const DRAG_THRESHOLD = 6;
 const DICE_SIZE = 64;
 const DICE_GAP = 12;
 const DICE_COLUMNS = 5;
-const DICE_COUNT_PRESETS = [1, 2, 3, 4, 5, 10] as const;
 const PERCENTILE_DICE_WIDTH = 116;
 const RESULT_TEXT_COLOR = "#000000";
 const RESULT_TEXT_OUTLINE = "#ffffff";
-const D10_FACETS_PATH = "M12 2L7.5 12L12 22M12 2L16.5 12L12 22";
 
 export const rollDie = (sides: number): number => {
   if (!Number.isInteger(sides) || sides < 2) {
@@ -84,6 +84,7 @@ type DragState = {
 type RollAnimation = {
   sides: DiceSides;
   count: number;
+  hunger: number;
   results: number[];
   clientX: number;
   clientY: number;
@@ -115,104 +116,54 @@ const createValueSvg = (
 ) =>
   `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="${fontSize}" font-weight="700" fill="${textColor}" stroke="${backgroundColor}" stroke-width="5" stroke-linejoin="round" style="paint-order: stroke">${value}</text>`;
 
-const createD10FacetsSvg = () => `<g data-die-facets="d10">
-  <path d="${D10_FACETS_PATH}" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round" opacity="0.8"/>
-  <path d="${D10_FACETS_PATH}" fill="none" stroke="#000000" stroke-width="0.45" stroke-linejoin="round" opacity="0.7"/>
-</g>`;
-
 export const createDieSvg = (
   sides: DiceSides,
   result: number,
-  accentColor: string,
+  _accentColor: string,
   isDarkTheme: boolean,
 ) => {
-  const backgroundColor = isDarkTheme ? "#2f2f2f" : "#ffffff";
-  const resultFontSize = result >= 100 ? 16 : result >= 10 ? 20 : 24;
+  const paper = isDarkTheme ? "#252529" : "#ffffff";
+  const ink = isDarkTheme ? "#e6e6eb" : "#363636";
   const { width, height } = getDieDimensions(sides);
-
+  const value = (number: string | number, x: number, y: number, size = 17) =>
+    createValueSvg(number, x, y, size, RESULT_TEXT_COLOR, RESULT_TEXT_OUTLINE);
   let shape: string;
-  switch (sides) {
-    case 2:
-      shape = `<g data-die-shape="coin">
-        <circle cx="32" cy="32" r="28" fill="${backgroundColor}" stroke="${accentColor}" stroke-width="3"/>
-        <circle cx="32" cy="32" r="23" fill="none" stroke="${accentColor}" stroke-width="1.5" opacity="0.45"/>
-        ${createValueSvg(
-          result,
-          32,
-          33,
-          resultFontSize,
-          RESULT_TEXT_COLOR,
-          RESULT_TEXT_OUTLINE,
-        )}
-      </g>`;
-      break;
-    case 4:
-    case 6:
-    case 8:
-    case 10:
-    case 12:
-    case 20: {
-      const icon = MDI_DICE_ICONS[sides];
-      shape = `<g data-die-shape="${icon.shape}">
-        <g transform="translate(2 2) scale(2.5)">
-          <path d="${icon.outlinePath}" fill="${accentColor}"/>
-          ${sides === 10 ? createD10FacetsSvg() : ""}
-        </g>
-        ${createValueSvg(
-          result,
-          32,
-          sides === 4 ? 38 : 33,
-          resultFontSize,
-          RESULT_TEXT_COLOR,
-          RESULT_TEXT_OUTLINE,
-        )}
-      </g>`;
-      break;
-    }
-    case 100: {
-      const tens =
-        result === 100
-          ? "00"
-          : String(Math.floor(result / 10) * 10).padStart(2, "0");
-      const units = result === 100 ? 0 : result % 10;
-      shape = `<g data-die-shape="percentile-pair">
-        <g transform="translate(1 5) scale(2.25)">
-          <path d="${MDI_DICE_ICONS[10].outlinePath}" fill="${accentColor}"/>
-          ${createD10FacetsSvg()}
-        </g>
-        <g transform="translate(59 5) scale(2.25)">
-          <path d="${MDI_DICE_ICONS[10].outlinePath}" fill="${accentColor}"/>
-          ${createD10FacetsSvg()}
-        </g>
-        ${createValueSvg(
-          tens,
-          28,
-          33,
-          16,
-          RESULT_TEXT_COLOR,
-          RESULT_TEXT_OUTLINE,
-        )}
-        ${createValueSvg(
-          units,
-          86,
-          33,
-          18,
-          RESULT_TEXT_COLOR,
-          RESULT_TEXT_OUTLINE,
-        )}
-      </g>`;
-      break;
-    }
+  if (sides === 2) {
+    shape = `<g data-die-shape="coin"><circle cx="32" cy="32" r="28" fill="${paper}" stroke="${ink}" stroke-width="2"/>${value(
+      result,
+      32,
+      33,
+    )}</g>`;
+  } else if (sides === 100) {
+    const tens =
+      result === 100
+        ? "00"
+        : String(Math.floor(result / 10) * 10).padStart(2, "0");
+    shape = `<g data-die-shape="percentile-pair"><g transform="scale(.9)">${drawBoardDie(
+      10,
+      ink,
+      paper,
+    )}${value(
+      tens,
+      32,
+      26,
+    )}</g><g transform="translate(58 0) scale(.9)">${drawBoardDie(
+      10,
+      ink,
+      paper,
+    )}${value(result === 100 ? 0 : result % 10, 32, 26)}</g></g>`;
+  } else {
+    const die = BOARD_DICE[sides];
+    shape =
+      drawBoardDie(sides, ink, paper) +
+      value(result, die.x, die.y, sides === 6 ? 14 : 17);
   }
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-    ${shape}
-  </svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${shape}</svg>`;
 };
 
 export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [hoveredSides, setHoveredSides] = useState<DiceSides | null>(null);
+  const [hunger, setHunger] = useState(0);
   const [diceCounts, setDiceCounts] = useState(createInitialDiceCounts);
   const [dragPreview, setDragPreview] = useState<DragState | null>(null);
   const [rollAnimation, setRollAnimation] = useState<RollAnimation | null>(
@@ -248,12 +199,14 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         const fileData: BinaryFileData = {
           id: fileId,
           dataURL: getDataURL_sync(
-            createDieSvg(
-              roll.sides,
-              result,
-              appState.currentItemStrokeColor,
-              appState.theme === "dark",
-            ),
+            roll.hunger > 0
+              ? createV5DieSvg(result, index < roll.hunger)
+              : createDieSvg(
+                  roll.sides,
+                  result,
+                  appState.currentItemStrokeColor,
+                  appState.theme === "dark",
+                ),
             MIME_TYPES.svg,
           ),
           mimeType: MIME_TYPES.svg,
@@ -283,6 +236,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
               count: roll.count,
               result,
               index,
+              hunger: index < roll.hunger,
             },
           },
         });
@@ -307,13 +261,14 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         sides,
         count,
         results,
+        hunger: getHungerCount(sides, count, hunger),
         clientX,
         clientY,
       };
 
       setRollAnimation(roll);
     },
-    [],
+    [hunger],
   );
 
   useEffect(() => {
@@ -347,7 +302,6 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
 
       dragStateRef.current = null;
       setDragPreview(null);
-      setHoveredSides(null);
       if (dragState.hasMoved) {
         startRollAtPoint(
           dragState.sides,
@@ -361,7 +315,6 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
     const cancelDrag = () => {
       dragStateRef.current = null;
       setDragPreview(null);
-      setHoveredSides(null);
     };
 
     window.addEventListener("pointermove", handlePointerMove);
@@ -393,7 +346,6 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         !diceRollerRef.current?.contains(event.target)
       ) {
         setIsOpen(false);
-        setHoveredSides(null);
       }
     };
 
@@ -425,7 +377,6 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
 
       event.preventDefault();
       event.stopPropagation();
-      setHoveredSides(null);
       setIsOpen((current) => !current);
     };
 
@@ -493,20 +444,32 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
           <div className="dice-roller__grid">
             {DICE_SIDES.map((sides) => {
               const count = diceCounts[sides];
-              const isHovered = hoveredSides === sides;
               return (
-                <div
-                  className="dice-roller__die-wrapper"
-                  key={sides}
-                  onPointerEnter={() => setHoveredSides(sides)}
-                  onPointerLeave={() => setHoveredSides(null)}
-                >
+                <div className="dice-roller__die-wrapper" key={sides}>
+                  <div className="dice-roller__quantity-controls">
+                    <button
+                      type="button"
+                      aria-label={`Уменьшить количество d${sides}`}
+                      disabled={count === 1}
+                      onClick={() => updateDiceCount(sides, -1)}
+                    >
+                      −
+                    </button>
+                    <output aria-label={`Количество d${sides}`}>{count}</output>
+                    <button
+                      type="button"
+                      aria-label={`Увеличить количество d${sides}`}
+                      disabled={count === MAX_DICE_COUNT}
+                      onClick={() => updateDiceCount(sides, 1)}
+                    >
+                      +
+                    </button>
+                  </div>
                   <button
                     className="dice-roller__die"
                     type="button"
                     aria-label={`Перетащить ${count} кубик(а) d${sides} на холст`}
                     aria-grabbed={dragPreview?.sides === sides}
-                    onFocus={() => setHoveredSides(sides)}
                     onPointerDown={(event) =>
                       handleDiePointerDown(event, sides)
                     }
@@ -514,55 +477,32 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
                     <DiceIcon sides={sides} />
                     {count > 1 && <small>×{count}</small>}
                   </button>
-
-                  {isHovered && !dragPreview && (
-                    <div
-                      className="dice-roller__quantity"
-                      onPointerEnter={() => setHoveredSides(sides)}
-                      onPointerDown={(event) => event.stopPropagation()}
-                    >
-                      <span>Количество</span>
-                      <div className="dice-roller__quantity-controls">
-                        <button
-                          type="button"
-                          aria-label={`Уменьшить количество d${sides}`}
-                          onClick={() => updateDiceCount(sides, -1)}
-                        >
-                          −
-                        </button>
-                        <strong>{count}</strong>
-                        <button
-                          type="button"
-                          aria-label={`Увеличить количество d${sides}`}
-                          onClick={() => updateDiceCount(sides, 1)}
-                        >
-                          +
-                        </button>
-                      </div>
-                      <div className="dice-roller__quantity-presets">
-                        {DICE_COUNT_PRESETS.map((preset) => (
-                          <button
-                            className={preset === count ? "is-selected" : ""}
-                            key={preset}
-                            type="button"
-                            aria-label={`Выбрать ${preset} кубик(а) d${sides}`}
-                            aria-pressed={preset === count}
-                            onClick={() =>
-                              setDiceCounts((current) => ({
-                                ...current,
-                                [sides]: preset,
-                              }))
-                            }
-                          >
-                            {preset}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
+          </div>
+          <div className="dice-roller__hunger">
+            <span id="dice-hunger-label">Кубики голода</span>
+            <div className="dice-roller__quantity-controls">
+              <button
+                type="button"
+                aria-label="Уменьшить кубики голода"
+                disabled={hunger === 0}
+                onClick={() => setHunger((n) => Math.max(0, n - 1))}
+              >
+                −
+              </button>
+              <output aria-labelledby="dice-hunger-label">{hunger}</output>
+              <button
+                type="button"
+                aria-label="Увеличить кубики голода"
+                disabled={hunger === 5}
+                onClick={() => setHunger((n) => Math.min(5, n + 1))}
+              >
+                +
+              </button>
+            </div>
+            <small>Заменяют обычные d10 в броске</small>
           </div>
         </div>
       )}
@@ -584,6 +524,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         <DiceThrow
           sides={rollAnimation.sides}
           count={rollAnimation.count}
+          hunger={rollAnimation.hunger}
           clientX={rollAnimation.clientX}
           clientY={rollAnimation.clientY}
           onComplete={({ results }) => {

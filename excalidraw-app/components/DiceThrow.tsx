@@ -8,6 +8,7 @@ export type ThrowResult = { results: number[] };
 type Props = {
   sides: DiceSides;
   count: number;
+  hunger: number;
   clientX: number;
   clientY: number;
   onComplete: (result: ThrowResult) => void;
@@ -23,13 +24,22 @@ export const DiceThrow = (props: Props) => {
     let disposed = false;
     let cleanup = () => {};
     Promise.all([import("./dicePhysics")])
-      .then(([{ animateDice }]) => {
+      .then(async ([{ animateDice }]) => {
         if (!disposed && canvasRef.current) {
-          cleanup = animateDice(canvasRef.current, props, (result) => {
-            if (!disposed) {
-              completeRef.current(result);
-            }
-          });
+          const release = await animateDice(
+            canvasRef.current,
+            props,
+            (result) => {
+              if (!disposed) {
+                completeRef.current(result);
+              }
+            },
+          );
+          if (disposed) {
+            release();
+          } else {
+            cleanup = release;
+          }
         }
       })
       .catch(() => {

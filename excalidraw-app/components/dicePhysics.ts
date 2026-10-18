@@ -2,6 +2,8 @@ import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { ConvexGeometry } from "three/examples/jsm/geometries/ConvexGeometry.js";
 
+import { getV5Symbol } from "./v5Dice";
+
 import type { DiceSides } from "./DiceRoller";
 import type { ThrowResult } from "./DiceThrow";
 
@@ -108,16 +110,40 @@ const facesFor = (geometry: THREE.BufferGeometry) => {
   return { vertices, faces };
 };
 
-export const animateDice = (
+export const animateDice = async (
   canvas: HTMLCanvasElement,
   options: {
     sides: DiceSides;
     count: number;
+    hunger: number;
     clientX: number;
     clientY: number;
   },
   complete: (result: ThrowResult) => void,
 ) => {
+  const symbols = new Map<string, HTMLImageElement>();
+  if (options.hunger > 0) {
+    await Promise.all(
+      [false, true].flatMap((hunger) =>
+        Array.from({ length: 10 }, async (_, i) => {
+          const svg = getV5Symbol(i + 1, hunger);
+          if (symbols.has(svg)) {
+            return;
+          }
+          const image = new Image();
+          symbols.set(svg, image);
+          await new Promise<void>((resolve, reject) => {
+            image.onload = () => resolve();
+            image.onerror = () =>
+              reject(new Error("Не удалось загрузить символ кубика"));
+            image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+              svg,
+            )}`;
+          });
+        }),
+      ),
+    );
+  }
   const renderer = new THREE.WebGLRenderer({
     canvas,
     alpha: true,
@@ -145,7 +171,7 @@ export const animateDice = (
     world.addBody(wall);
     return wall;
   });
-  const scale = 34;
+  const scale = 34 * 1.4;
   const resize = () => {
     const w = window.innerWidth / scale;
     const h = window.innerHeight / scale;
@@ -189,7 +215,7 @@ export const animateDice = (
       const geometry = geometryFor(sides);
       const { vertices, faces } = facesFor(geometry);
       const material = new THREE.MeshStandardMaterial({
-        color: index % 2 ? 0x7149cc : 0x365edc,
+        color: options.hunger > 0 ? 0xffffff : index % 2 ? 0x7149cc : 0x365edc,
         roughness: 0.32,
         metalness: 0.15,
         flatShading: true,
@@ -197,6 +223,14 @@ export const animateDice = (
       const mesh = new THREE.Mesh(geometry, material);
       resources.push(geometry, material);
       scene.add(mesh);
+      if (options.hunger > 0) {
+        const edges = new THREE.EdgesGeometry(geometry);
+        const edgeMaterial = new THREE.LineBasicMaterial({
+          color: index < options.hunger ? 0xb52025 : 0x333333,
+        });
+        mesh.add(new THREE.LineSegments(edges, edgeMaterial));
+        resources.push(edges, edgeMaterial);
+      }
       const numberedFaces =
         sides === 2 ? faces.filter((f) => Math.abs(f.normal.z) > 0.99) : faces;
       numberedFaces.forEach((face, i) => {
@@ -213,7 +247,23 @@ export const animateDice = (
               ? String(i * 10).padStart(2, "0")
               : String(i)
             : String(i + 1);
-        ctx.fillText(value, 64, 64);
+        if (options.hunger > 0) {
+          const image = symbols.get(
+            getV5Symbol(i + 1, index < options.hunger),
+          )!;
+          const ratio = Math.min(100 / image.width, 100 / image.height);
+          const width = image.width * ratio;
+          const height = image.height * ratio;
+          ctx.drawImage(
+            image,
+            (128 - width) / 2,
+            (128 - height) / 2,
+            width,
+            height,
+          );
+        } else {
+          ctx.fillText(value, 64, 64);
+        }
         const texture = new THREE.CanvasTexture(label);
         const labelMaterial = new THREE.MeshBasicMaterial({
           map: texture,
