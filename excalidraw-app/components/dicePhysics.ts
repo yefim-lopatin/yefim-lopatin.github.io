@@ -120,6 +120,7 @@ export const animateDice = async (
     clientY: number;
   },
   complete: (result: ThrowResult) => void,
+  reportResult?: (result: ThrowResult) => void,
 ) => {
   const symbols = new Map<string, HTMLImageElement>();
   if (options.hunger > 0) {
@@ -330,54 +331,82 @@ export const animateDice = async (
     },
   );
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Calculate the physical outcome before playback so network delivery does
+  // not wait for several seconds of animation. Replay these exact poses.
+  const frames: Float32Array[] = [];
+  for (let step = 0; step < 420; step++) {
+    world.step(1 / 60);
+    const poses = new Float32Array(dice.length * 7);
+    dice.forEach(({ body }, index) => {
+      poses.set(
+        [
+          body.position.x,
+          body.position.y,
+          body.position.z,
+          body.quaternion.x,
+          body.quaternion.y,
+          body.quaternion.z,
+          body.quaternion.w,
+        ],
+        index * 7,
+      );
+    });
+    frames.push(poses);
+    if (
+      step >= 60 &&
+      dice.every(({ body }) => body.sleepState === CANNON.Body.SLEEPING)
+    ) {
+      break;
+    }
+  }
+  const values = dice.map(({ body, numberedFaces }) => {
+    const quaternion = new THREE.Quaternion(
+      body.quaternion.x,
+      body.quaternion.y,
+      body.quaternion.z,
+      body.quaternion.w,
+    );
+    let top = 0;
+    let best = -Infinity;
+    numberedFaces.forEach((face, index) => {
+      const height = face.normal.clone().applyQuaternion(quaternion).z;
+      if (height > best) {
+        best = height;
+        top = index;
+      }
+    });
+    return options.sides === 100 ? top : top + 1;
+  });
+  const result = {
+    results:
+      options.sides === 100
+        ? Array.from(
+            { length: options.count },
+            (_, index) => values[index * 2] * 10 + values[index * 2 + 1] || 100,
+          )
+        : values,
+  };
+  reportResult?.(result);
   const start = performance.now();
-  let previous = start;
-  let stoppedAt: number | null = null;
   let frame = 0;
   const tick = (now: number) => {
-    world.step(1 / 60, Math.min((now - previous) / 1000, 0.1), 6);
-    previous = now;
-    for (const { body, mesh } of dice) {
-      mesh.position.set(body.position.x, body.position.y, body.position.z);
+    const elapsed = Math.max(0, (now - start) / 1000);
+    const poses = frames[Math.min(frames.length - 1, Math.floor(elapsed * 60))];
+    dice.forEach(({ mesh }, index) => {
+      const offset = index * 7;
+      mesh.position.set(poses[offset], poses[offset + 1], poses[offset + 2]);
       mesh.quaternion.set(
-        body.quaternion.x,
-        body.quaternion.y,
-        body.quaternion.z,
-        body.quaternion.w,
+        poses[offset + 3],
+        poses[offset + 4],
+        poses[offset + 5],
+        poses[offset + 6],
       );
-    }
+    });
     if (!reduced) {
       renderer.render(scene, camera);
     }
-    if (
-      stoppedAt === null &&
-      ((now - start > 1000 &&
-        dice.every(({ body }) => body.sleepState === CANNON.Body.SLEEPING)) ||
-        now - start > 7000)
-    ) {
-      stoppedAt = now;
-    }
-    if (stoppedAt !== null && now - stoppedAt > (reduced ? 0 : 900)) {
-      const values = dice.map(({ mesh, numberedFaces }) => {
-        let top = 0;
-        let best = -Infinity;
-        numberedFaces.forEach((face, i) => {
-          const height = face.normal.clone().applyQuaternion(mesh.quaternion).z;
-          if (height > best) {
-            best = height;
-            top = i;
-          }
-        });
-        return options.sides === 100 ? top : top + 1;
-      });
-      const results =
-        options.sides === 100
-          ? Array.from(
-              { length: options.count },
-              (_, i) => values[i * 2] * 10 + values[i * 2 + 1] || 100,
-            )
-          : values;
-      complete({ results });
+    if (reduced || elapsed >= frames.length / 60 + 0.9) {
+      complete(result);
       return;
     }
     frame = requestAnimationFrame(tick);

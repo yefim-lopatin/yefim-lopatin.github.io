@@ -12,6 +12,7 @@ type Props = {
   clientX: number;
   clientY: number;
   onComplete: (result: ThrowResult) => void;
+  onResult?: (result: ThrowResult) => void;
 };
 
 // Load the renderer only when a throw is requested.
@@ -19,9 +20,18 @@ export const DiceThrow = (props: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const completeRef = useRef(props.onComplete);
   completeRef.current = props.onComplete;
+  const resultRef = useRef(props.onResult);
+  resultRef.current = props.onResult;
 
   useEffect(() => {
     let disposed = false;
+    let reported = false;
+    const report = (result: ThrowResult) => {
+      if (!disposed && !reported) {
+        reported = true;
+        resultRef.current?.(result);
+      }
+    };
     let cleanup = () => {};
     Promise.all([import("./dicePhysics")])
       .then(async ([{ animateDice }]) => {
@@ -31,9 +41,11 @@ export const DiceThrow = (props: Props) => {
             props,
             (result) => {
               if (!disposed) {
+                report(result);
                 completeRef.current(result);
               }
             },
+            report,
           );
           if (disposed) {
             release();
@@ -45,6 +57,7 @@ export const DiceThrow = (props: Props) => {
       .catch(() => {
         // Keep rolling usable on devices without WebGL.
         if (!disposed) {
+          report({ results: [] });
           completeRef.current({ results: [] });
         }
       });

@@ -33,6 +33,15 @@ export interface FontMetadata {
 }
 
 export const FONT_METADATA: Record<number, FontMetadata> = {
+  [FONT_FAMILY.Dice]: {
+    metrics: {
+      unitsPerEm: 1024,
+      ascender: 1024,
+      descender: 0,
+      lineHeight: 1,
+    },
+    private: true,
+  },
   [FONT_FAMILY.Excalifont]: {
     metrics: {
       unitsPerEm: 1000,

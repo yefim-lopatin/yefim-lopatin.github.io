@@ -33,6 +33,7 @@ import type { Scene } from "@excalidraw/element";
 
 import { CascadiaFontFaces } from "./Cascadia";
 import { ComicShannsFontFaces } from "./ComicShanns";
+import { DiceFontFaces } from "./Dice";
 import { EmojiFontFaces } from "./Emoji";
 import { ExcalidrawFontFace } from "./ExcalidrawFontFace";
 import { ExcalifontFontFaces } from "./Excalifont";
@@ -383,6 +384,7 @@ export class Fonts {
     };
 
     init("Cascadia", ...CascadiaFontFaces);
+    init("Dice", ...DiceFontFaces);
     init("Comic Shanns", ...ComicShannsFontFaces);
     init("Excalifont", ...ExcalifontFontFaces);
     // keeping for backwards compatibility reasons, uses system font (Helvetica on MacOS, Arial on Win)

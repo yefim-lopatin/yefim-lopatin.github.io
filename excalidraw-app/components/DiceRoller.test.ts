@@ -21,14 +21,25 @@ import {
 
 vi.mock("./DiceThrow", () => ({
   DiceThrow: ({
+    onResult,
     onComplete,
   }: {
+    onResult: (result: { results: number[] }) => void;
     onComplete: (result: { results: number[] }) => void;
   }) =>
     createElement(
-      "button",
-      { onClick: () => onComplete({ results: [12] }) },
-      "Завершить тестовый бросок",
+      "div",
+      null,
+      createElement(
+        "button",
+        { onClick: () => onResult({ results: [12] }) },
+        "Определить тестовый результат",
+      ),
+      createElement(
+        "button",
+        { onClick: () => onComplete({ results: [12] }) },
+        "Завершить тестовый бросок",
+      ),
     ),
 }));
 
@@ -81,13 +92,22 @@ describe("DiceRoller", () => {
     pointer(window, "pointermove", 250, 350);
     pointer(window, "pointerup", 250, 350);
     fireEvent.click(
-      screen.getByRole("button", { name: "Завершить тестовый бросок" }),
+      screen.getByRole("button", { name: "Определить тестовый результат" }),
     );
     const { elements } = updateScene.mock.calls[0][0];
     expect(
       elements.find((element) => element.id === deleted.id)?.isDeleted,
     ).toBe(true);
     expect(elements.filter((element) => !element.isDeleted)).toHaveLength(1);
+    expect(elements.find((element) => !element.isDeleted)?.type).toBe("text");
+    expect(excalidrawAPI.addFiles).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Завершить тестовый бросок" }),
+    ).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Завершить тестовый бросок" }),
+    );
+    expect(updateScene).toHaveBeenCalledTimes(1);
     expect(getSceneVersion(elements)).toBeGreaterThan(
       getSceneVersion([deleted]),
     );
@@ -184,7 +204,7 @@ describe("DiceRoller", () => {
     expect(screen.queryByRole("dialog", { name: "Кубики" })).toBeNull();
   });
 
-  it("keeps quantity controls visible and limits Hunger to five", () => {
+  it("keeps quantity controls visible and toggles Hunger up to ten", () => {
     render(createElement(DiceRoller, { excalidrawAPI: null }));
     fireEvent.keyDown(window, { key: "d", code: "KeyD" });
     for (const sides of DICE_SIDES) {
@@ -203,15 +223,28 @@ describe("DiceRoller", () => {
     const increase = screen.getByRole("button", {
       name: "Увеличить кубики голода",
     });
-    for (let i = 0; i < 7; i++) {
+    expect(screen.queryByText("×2")).toBeNull();
+    expect(increase.hasAttribute("disabled")).toBe(true);
+    fireEvent.click(screen.getByRole("switch", { name: "Кубики голода" }));
+    for (let i = 0; i < 12; i++) {
       fireEvent.click(increase);
     }
-    expect(screen.getByLabelText("Кубики голода").textContent).toBe("5");
+    expect(screen.getByLabelText("Количество кубиков голода").textContent).toBe(
+      "10",
+    );
     expect(increase.hasAttribute("disabled")).toBe(true);
+    fireEvent.click(screen.getByRole("switch", { name: "Кубики голода" }));
+    expect(
+      screen
+        .getByRole("button", { name: "Уменьшить кубики голода" })
+        .hasAttribute("disabled"),
+    ).toBe(true);
   });
 
   it("replaces only d10s with Hunger dice and maps all V5 faces", () => {
     expect(getHungerCount(10, 5, 0)).toBe(0);
+    expect(getHungerCount(10, 20, 12)).toBe(10);
+    expect(getHungerCount(10, 10, 10)).toBe(10);
     expect(getHungerCount(10, 2, 5)).toBe(2);
     expect(getHungerCount(20, 5, 3)).toBe(0);
     expect(getV5Symbol(1, true)).not.toBe(getV5Symbol(2, true));
