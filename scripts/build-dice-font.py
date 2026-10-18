@@ -124,13 +124,14 @@ def v5(symbol):
     draw_geometry(pen, shape)
     svg = ET.parse(ROOT / f"excalidraw-app/components/v5-symbols/{symbol}.svg").getroot()
     _, _, width, height = map(float, svg.attrib["viewBox"].split())
+    scale = min(16 / width, 12 / height)
     for node in svg.iter():
         if node.tag.endswith("path"):
             filled = Polygon()
             for points in path_lines(node.attrib["d"]):
                 filled = filled.symmetric_difference(Polygon(points).buffer(0))
-            filled = affinity.scale(filled, 22 / width, 27 / height, origin=(0, 0))
-            draw_geometry(pen, affinity.translate(filled, xoff=21, yoff=15))
+            filled = affinity.scale(filled, scale, scale, origin=(0, 0))
+            draw_geometry(pen, affinity.translate(filled, xoff=32 - width * scale / 2, yoff=27 - height * scale / 2))
     return pen.glyph(), 1024
 
 

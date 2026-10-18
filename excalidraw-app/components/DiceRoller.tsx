@@ -77,6 +77,7 @@ type RollAnimation = {
   sides: DiceSides;
   count: number;
   hunger: number;
+  difficulty?: number;
   results: number[];
   clientX: number;
   clientY: number;
@@ -97,6 +98,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [hunger, setHunger] = useState(0);
   const [hungerEnabled, setHungerEnabled] = useState(false);
+  const [difficulty, setDifficulty] = useState(1);
   const [diceCounts, setDiceCounts] = useState(createInitialDiceCounts);
   const [dragPreview, setDragPreview] = useState<DragState | null>(null);
   const [rollAnimation, setRollAnimation] = useState<RollAnimation | null>(
@@ -126,6 +128,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         sides: roll.sides,
         results: roll.results,
         hunger: roll.hunger,
+        difficulty: roll.difficulty,
         x: scenePoint.x,
         y: scenePoint.y,
         isDarkTheme: appState.theme === "dark",
@@ -150,13 +153,14 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         count,
         results,
         hunger: getHungerCount(sides, count, hungerEnabled ? hunger : 0),
+        difficulty: hungerEnabled && sides === 10 ? difficulty : undefined,
         clientX,
         clientY,
       };
 
       setRollAnimation(roll);
     },
-    [hunger, hungerEnabled],
+    [hunger, hungerEnabled, difficulty],
   );
 
   useEffect(() => {
@@ -399,6 +403,30 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
               </button>
             </div>
             <small>Заменяют обычные d10 в броске</small>
+            {hungerEnabled && (
+              <div className="dice-roller__difficulty">
+                <span>Сложность</span>
+                <div className="dice-roller__quantity-controls">
+                  <button
+                    type="button"
+                    aria-label="Уменьшить сложность"
+                    disabled={difficulty === 1}
+                    onClick={() => setDifficulty((n) => Math.max(1, n - 1))}
+                  >
+                    −
+                  </button>
+                  <output aria-label="Сложность проверки">{difficulty}</output>
+                  <button
+                    type="button"
+                    aria-label="Увеличить сложность"
+                    disabled={difficulty === 40}
+                    onClick={() => setDifficulty((n) => Math.min(40, n + 1))}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

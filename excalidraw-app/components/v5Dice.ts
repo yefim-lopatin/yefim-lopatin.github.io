@@ -26,12 +26,44 @@ export const getHungerCount = (sides: number, count: number, hunger: number) =>
 
 export const createV5DieSvg = (result: number, hunger: boolean) => {
   const symbol = getV5Symbol(result, hunger)
-    .replace(/<svg\b/, '<svg x="21" y="15"')
-    .replace(/width="[^"]*"/, 'width="22"')
-    .replace(/height="[^"]*"/, 'height="27"');
+    .replace(/<svg\b/, '<svg x="24" y="21"')
+    .replace(/width="[^"]*"/, 'width="16"')
+    .replace(/height="[^"]*"/, 'height="12"');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">${drawBoardDie(
     10,
     hunger ? "#b52025" : "#333333",
     "#ffffff",
   )}${symbol}</svg>`;
+};
+
+export const getV5Result = (
+  results: readonly number[],
+  hunger: number,
+  difficulty: number,
+) => {
+  const tens = results.filter((value) => value === 10).length;
+  const successes =
+    results.filter((value) => value >= 6).length + Math.floor(tens / 2) * 2;
+  const hungerDice = results.slice(0, hunger);
+  const count = `${successes} ${
+    successes % 10 === 1 && successes % 100 !== 11
+      ? "успех"
+      : successes % 10 >= 2 &&
+        successes % 10 <= 4 &&
+        (successes % 100 < 12 || successes % 100 > 14)
+      ? "успеха"
+      : "успехов"
+  }`;
+  if (successes < difficulty) {
+    if (hungerDice.includes(1)) {
+      return `Кровавый провал — ${count}`;
+    }
+    return successes === 0 ? "Нет успехов" : `${count} — провал`;
+  }
+  if (tens >= 2) {
+    return `${
+      hungerDice.includes(10) ? "Кровавый триумф" : "Прорыв"
+    } — ${count}`;
+  }
+  return count;
 };

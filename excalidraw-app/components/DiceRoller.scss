@@ -239,6 +239,7 @@
 }
 
 .dice-roller__hunger {
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -294,4 +295,11 @@
 .dice-roller__hunger-toggle input:focus-visible + .dice-roller__switch {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+.dice-roller__difficulty {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-basis: 100%;
 }

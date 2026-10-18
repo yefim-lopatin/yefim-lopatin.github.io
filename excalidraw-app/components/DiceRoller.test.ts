@@ -226,6 +226,16 @@ describe("DiceRoller", () => {
     expect(screen.queryByText("×2")).toBeNull();
     expect(increase.hasAttribute("disabled")).toBe(true);
     fireEvent.click(screen.getByRole("switch", { name: "Кубики голода" }));
+    expect(screen.getByLabelText("Сложность проверки").textContent).toBe("1");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Увеличить сложность" }),
+    );
+    expect(screen.getByLabelText("Сложность проверки").textContent).toBe("2");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Уменьшить сложность" }),
+    );
+    expect(screen.getByLabelText("Сложность проверки").textContent).toBe("1");
+
     for (let i = 0; i < 12; i++) {
       fireEvent.click(increase);
     }

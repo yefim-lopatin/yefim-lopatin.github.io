@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { FONT_FAMILY } from "@excalidraw/common";
 
+import { getV5Result } from "./v5Dice";
+
 import { DICE_SIDES } from "./diceSvg";
 import { createDiceText, getDieCharacter } from "./diceText";
 
@@ -82,7 +84,7 @@ describe("dice text", () => {
       5, 5, 2,
     ]);
     expect(elements[1].y - elements[0].y).toBe(76);
-    expect(elements.every((element) => element.strokeColor === "#e6e6eb")).toBe(
+    expect(elements.every((element) => element.strokeColor === "#363636")).toBe(
       true,
     );
     expect(new Set(elements.flatMap((element) => element.groupIds)).size).toBe(
@@ -96,5 +98,40 @@ describe("dice text", () => {
       `${getDieCharacter(100, 100)} ${getDieCharacter(100, 42)}`,
     );
     expect(element.strokeColor).not.toBe("#b52025");
+  });
+});
+
+describe("V5 result", () => {
+  it.each([
+    [[2, 5], 1, 1, "Нет успехов"],
+    [[1, 6], 1, 2, "Кровавый провал — 1 успех"],
+    [[1, 6], 1, 1, "1 успех"],
+    [[6, 3], 0, 2, "1 успех — провал"],
+    [[10, 10], 0, 4, "Прорыв — 4 успеха"],
+    [[10, 10], 1, 4, "Кровавый триумф — 4 успеха"],
+    [[10, 10], 1, 5, "4 успеха — провал"],
+    [[10, 10, 10], 1, 1, "Кровавый триумф — 5 успехов"],
+  ])(
+    "resolves %j with Hunger %i and difficulty %i",
+    (results, hunger, difficulty, expected) => {
+      expect(
+        getV5Result(
+          results as number[],
+          hunger as number,
+          difficulty as number,
+        ),
+      ).toBe(expected);
+    },
+  );
+  it("adds ordinary text below the dice even at zero Hunger", () => {
+    const elements = create({ sides: 10, results: [6, 3], difficulty: 1 });
+    expect(elements).toHaveLength(2);
+    expect(elements[1].text).toBe("1 успех");
+    expect(elements[1].fontFamily).toBe(FONT_FAMILY.Assistant);
+    expect(elements[1].y).toBeGreaterThanOrEqual(
+      elements[0].y + elements[0].height + 12,
+    );
+    expect(elements[1].groupIds).toEqual(elements[0].groupIds);
+    expect(elements[0].text).toContain(getDieCharacter(10, 6, true));
   });
 });

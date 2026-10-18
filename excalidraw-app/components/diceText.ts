@@ -1,6 +1,8 @@
 import { FONT_FAMILY, randomId } from "@excalidraw/common";
 import { newTextElement } from "@excalidraw/element";
 
+import { getV5Result } from "./v5Dice";
+
 import { DICE_SIDES, getDieDimensions } from "./diceSvg";
 
 import type { DiceSides } from "./diceSvg";
@@ -32,7 +34,7 @@ export const createDiceText = ({
   hunger,
   x,
   y,
-  isDarkTheme,
+  difficulty,
 }: {
   sides: DiceSides;
   results: readonly number[];
@@ -40,6 +42,7 @@ export const createDiceText = ({
   x: number;
   y: number;
   isDarkTheme: boolean;
+  difficulty?: number;
 }) => {
   const columns = Math.min(results.length, 5);
   const rows = Math.ceil(results.length / columns);
@@ -61,11 +64,18 @@ export const createDiceText = ({
           x: left + (index - start) * (width + 12),
           y: top + row * (height + 12),
           text: values
-            .map((value) => getDieCharacter(sides, value, hungerCount > 0, red))
+            .map((value) =>
+              getDieCharacter(
+                sides,
+                value,
+                difficulty !== undefined || hungerCount > 0,
+                red,
+              ),
+            )
             .join(" "),
           fontFamily: FONT_FAMILY.Dice,
           fontSize: 64,
-          strokeColor: red ? "#b52025" : isDarkTheme ? "#e6e6eb" : "#363636",
+          strokeColor: red ? "#b52025" : "#363636",
           textAlign: "left",
           verticalAlign: "top",
           groupIds: [groupId],
@@ -78,6 +88,21 @@ export const createDiceText = ({
       });
       index = runEnd;
     }
+  }
+  if (sides === 10 && difficulty !== undefined) {
+    elements.push(
+      newTextElement({
+        x: left,
+        y: top + rows * height + (rows - 1) * 12 + 12,
+        text: getV5Result(results, hungerCount, difficulty),
+        fontFamily: FONT_FAMILY.Assistant,
+        fontSize: 20,
+        strokeColor: "#363636",
+        textAlign: "left",
+        verticalAlign: "top",
+        groupIds: [groupId],
+      }),
+    );
   }
   return elements;
 };
