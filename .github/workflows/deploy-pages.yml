@@ -24,24 +24,9 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: yarn
-
-      - name: Install dependencies
-        run: corepack yarn install --frozen-lockfile
-
-      - name: Build Excalidraw
-        run: corepack yarn build
-        env:
-          VITE_APP_BASE_PATH: /excalidraw/
-
       - name: Assemble site
         run: |
-          mkdir -p _site/excalidraw
-          cp -R excalidraw-app/build/. _site/excalidraw/
+          mkdir -p _site
           cp -R site/. _site/
           printf '%s\n' "$GITHUB_SHA" > _site/version.txt
 
