@@ -248,6 +248,38 @@ export const getEmbedLink = (
     };
   }
 
+  try {
+    const url = new URL(link);
+    if (
+      ["google.com", "www.google.com", "maps.google.com"].includes(
+        url.hostname,
+      ) &&
+      url.pathname.startsWith("/maps")
+    ) {
+      const place = url.pathname.match(/^\/maps\/place\/([^/]+)/)?.[1];
+      const query =
+        url.searchParams.get("q") ||
+        (place ? decodeURIComponent(place.replace(/\+/g, " ")) : null);
+      if (url.pathname.startsWith("/maps/embed") || query) {
+        const result: IframeDataWithSandbox = {
+          link: url.pathname.startsWith("/maps/embed")
+            ? link
+            : `https://maps.google.com/maps?${new URLSearchParams({
+                q: query!,
+                output: "embed",
+              })}`,
+          intrinsicSize: { w: 800, h: 450 },
+          type: "generic",
+          sandbox: { allowSameOrigin: true },
+        };
+        embeddedLinkCache.set(originalLink, result);
+        return result;
+      }
+    }
+  } catch {
+    // Keep the normal fallback for invalid or unsupported URLs.
+  }
+
   const googleDriveVideo = parseGoogleDriveVideoLink(link);
   if (googleDriveVideo) {
     type = "video";

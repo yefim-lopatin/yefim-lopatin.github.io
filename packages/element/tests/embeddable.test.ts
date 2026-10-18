@@ -1,3 +1,5 @@
+import { normalizeLink, toValidURL } from "@excalidraw/common";
+
 import { embeddableURLValidator, getEmbedLink } from "../src/embeddable";
 
 describe("YouTube timestamp parsing", () => {
@@ -229,5 +231,29 @@ describe("Google Drive video embedding", () => {
         undefined,
       ),
     ).toBe(true);
+  });
+});
+
+describe("Google Maps embedding", () => {
+  it("embeds the Boston place link, including links without a protocol", () => {
+    const link = normalizeLink(
+      "google.com/maps/place/Boston,+MA,+USA/data=!4m2!3m1!1s0x89e3652d0d3d311b:0x787cbf240162e8a0?sa=X&ved=1t:242&ictx=111",
+    );
+    expect(toValidURL(link)).toBe(link);
+    expect(getEmbedLink(link)).toMatchObject({
+      link: "https://maps.google.com/maps?q=Boston%2C+MA%2C+USA&output=embed",
+      type: "generic",
+      sandbox: { allowSameOrigin: true },
+    });
+  });
+
+  it("preserves existing embed links and does not convert unrelated domains", () => {
+    const embed = "https://www.google.com/maps/embed?pb=test";
+    expect(getEmbedLink(embed)).toMatchObject({
+      link: embed,
+      sandbox: { allowSameOrigin: true },
+    });
+    const unrelated = "https://example.com/maps/place/Boston";
+    expect(getEmbedLink(unrelated)).toMatchObject({ link: unrelated });
   });
 });

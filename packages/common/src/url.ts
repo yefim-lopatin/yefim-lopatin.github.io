@@ -7,6 +7,9 @@ export const normalizeLink = (link: string) => {
   if (!link) {
     return link;
   }
+  if (/^(?:(?:www|maps)\.)?google\.com\/maps(?:[/?#]|$)/i.test(link)) {
+    link = `https://${link}`;
+  }
   return sanitizeUrl(escapeDoubleQuotes(link));
 };
 
