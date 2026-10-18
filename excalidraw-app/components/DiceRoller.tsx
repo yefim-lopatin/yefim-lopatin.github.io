@@ -14,7 +14,7 @@ import {
   randomId,
   viewportCoordsToSceneCoords,
 } from "@excalidraw/common";
-import { newImageElement } from "@excalidraw/element";
+import { newImageElement, syncInvalidIndices } from "@excalidraw/element";
 import { CaptureUpdateAction } from "@excalidraw/excalidraw";
 import { IconButton } from "@excalidraw/excalidraw/components/IconButton";
 import { getDataURL_sync } from "@excalidraw/excalidraw/data/blob";
@@ -247,7 +247,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
       // updateScene triggers App.onChange, which broadcasts the result to all
       // collaborators through the existing collaboration channel.
       excalidrawAPI.updateScene({
-        elements: [...sceneElements, ...resultElements],
+        elements: syncInvalidIndices([...sceneElements, ...resultElements]),
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       });
     },
