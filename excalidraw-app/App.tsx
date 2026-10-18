@@ -948,6 +948,7 @@ const ExcalidrawWrapper = () => {
       })}
     >
       <Excalidraw
+        validateEmbeddable={true}
         viewportStatusFrame={viewportStatusFrame}
         userToFollow={userToFollow}
         onChange={onChange}
