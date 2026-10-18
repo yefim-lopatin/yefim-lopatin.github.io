@@ -229,7 +229,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
           width: dieDimensions.width,
           height: dieDimensions.height,
           fileId,
-          status: "saved",
+          status: "pending",
           customData: {
             diceRoll: {
               sides: roll.sides,
