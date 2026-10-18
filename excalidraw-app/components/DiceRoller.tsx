@@ -117,7 +117,9 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
       }
 
       const appState = excalidrawAPI.getAppState();
-      const sceneElements = excalidrawAPI.getSceneElements();
+      // Keep deletion records: collaboration compares the sum of element
+      // versions, so dropping them can prevent a new roll from being sent.
+      const sceneElements = excalidrawAPI.getSceneElementsIncludingDeleted();
       const scenePoint = viewportCoordsToSceneCoords(
         {
           clientX: roll.clientX,

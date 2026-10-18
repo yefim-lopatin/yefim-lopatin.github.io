@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { getSceneVersion, newElement } from "@excalidraw/element";
+import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
+
+import type { ExcalidrawElement } from "@excalidraw/element/types";
+import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
 import { BOARD_DICE } from "./BoardDice";
 import { getHungerCount, getV5Symbol, createV5DieSvg } from "./v5Dice";
@@ -14,7 +19,80 @@ import {
   rollDie,
 } from "./DiceRoller";
 
+vi.mock("./DiceThrow", () => ({
+  DiceThrow: ({
+    onComplete,
+  }: {
+    onComplete: (result: { results: number[] }) => void;
+  }) =>
+    createElement(
+      "button",
+      { onClick: () => onComplete({ results: [12] }) },
+      "Завершить тестовый бросок",
+    ),
+}));
+
 describe("DiceRoller", () => {
+  it("keeps deletion records so a roll increases the collaboration scene version", () => {
+    const deleted = {
+      ...newElement({ type: "rectangle", x: 0, y: 0, width: 10, height: 10 }),
+      isDeleted: true,
+      version: 100,
+    };
+    const updateScene = vi.fn(
+      (scene: { elements: readonly ExcalidrawElement[] }) => scene,
+    );
+    const excalidrawAPI = {
+      getAppState: () => ({
+        ...getDefaultAppState(),
+        offsetLeft: 0,
+        offsetTop: 0,
+      }),
+      getSceneElements: () => [],
+      getSceneElementsIncludingDeleted: () => [deleted],
+      addFiles: vi.fn(),
+      updateScene,
+    } as unknown as ExcalidrawImperativeAPI;
+    render(createElement(DiceRoller, { excalidrawAPI }));
+    fireEvent.keyDown(window, { key: "d", code: "KeyD" });
+    const pointer = (
+      target: Element | Window,
+      type: string,
+      x: number,
+      y: number,
+    ) => {
+      const event = new MouseEvent(type, {
+        bubbles: true,
+        button: 0,
+        clientX: x,
+        clientY: y,
+      });
+      Object.defineProperty(event, "pointerId", { value: 1 });
+      fireEvent(target, event);
+    };
+    pointer(
+      screen.getByRole("button", {
+        name: "Перетащить 1 кубик(а) d20 на холст",
+      }),
+      "pointerdown",
+      120,
+      240,
+    );
+    pointer(window, "pointermove", 250, 350);
+    pointer(window, "pointerup", 250, 350);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Завершить тестовый бросок" }),
+    );
+    const { elements } = updateScene.mock.calls[0][0];
+    expect(
+      elements.find((element) => element.id === deleted.id)?.isDeleted,
+    ).toBe(true);
+    expect(elements.filter((element) => !element.isDeleted)).toHaveLength(1);
+    expect(getSceneVersion(elements)).toBeGreaterThan(
+      getSceneVersion([deleted]),
+    );
+  });
+
   it("contains the standard RPG dice", () => {
     expect(DICE_SIDES).toEqual([2, 4, 6, 8, 10, 12, 20, 100]);
   });
