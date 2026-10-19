@@ -157,6 +157,7 @@ export const SelectedShapeActions = ({
   if (appState.activeTool.type === "bucketfill") {
     return (
       <div className="selected-shape-actions">
+        {renderAction("changeShape")}
         <div>{renderAction("changeBucketFillBackgroundColor")}</div>
         {renderAction("changeFillStyle")}
         {renderAction("changeOpacity")}
@@ -166,6 +167,7 @@ export const SelectedShapeActions = ({
 
   return (
     <div className="selected-shape-actions">
+      {renderAction("changeShape")}
       <div>{predicates.strokeColor && renderAction("changeStrokeColor")}</div>
       {predicates.backgroundColor && (
         <div>{renderAction("changeBackgroundColor")}</div>
@@ -288,6 +290,7 @@ const CombinedShapeProperties = ({
             onClose={() => {}}
           >
             <div className="selected-shape-actions">
+              {renderAction("changeShape")}
               {predicates.fill && renderAction("changeFillStyle")}
               {predicates.strokeWidth && renderAction("changeStrokeWidth")}
               {
@@ -480,6 +483,7 @@ const CombinedTextProperties = ({
             }}
           >
             <div className="selected-shape-actions">
+              {renderAction("changeShape")}
               {predicates.text && renderAction("changeFontSize")}
               {predicates.textAlign && renderAction("changeTextAlign")}
               {predicates.verticalAlign && renderAction("changeVerticalAlign")}
@@ -556,6 +560,7 @@ const CombinedExtraActions = ({
             onClose={() => {}}
           >
             <div className="selected-shape-actions">
+              {renderAction("changeShape")}
               {predicates.layers && (
                 <LayersFieldset renderAction={renderAction} />
               )}
@@ -631,6 +636,7 @@ export const CompactShapeActions = ({
 
   return (
     <div className="compact-shape-actions">
+      {renderAction("changeShape")}
       {/* Stroke Color */}
       {predicates.strokeColor && (
         <div className={clsx("compact-action-item")}>

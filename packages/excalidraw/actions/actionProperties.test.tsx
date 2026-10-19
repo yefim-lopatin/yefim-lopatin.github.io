@@ -8,9 +8,11 @@ import {
   STROKE_WIDTH,
 } from "@excalidraw/common";
 
+import { CaptureUpdateAction } from "@excalidraw/element";
+
 import { Excalidraw } from "../index";
 import { API } from "../tests/helpers/api";
-import { UI } from "../tests/helpers/ui";
+import { Keyboard, UI } from "../tests/helpers/ui";
 import { render } from "../tests/test-utils";
 
 describe("element locking", () => {
@@ -226,5 +228,83 @@ describe("element locking", () => {
         "active",
       );
     });
+  });
+});
+
+describe("shape conversion", () => {
+  it("changes only shape and keeps selection and appearance", async () => {
+    await render(<Excalidraw />);
+    const shape = API.createElement({
+      type: "ellipse",
+      strokeColor: "#ff0000",
+      backgroundColor: "#00ff00",
+      strokeWidth: 4,
+      fillStyle: "solid",
+      width: 180,
+      height: 100,
+    });
+    API.setElements([shape]);
+    API.setSelectedElements([shape]);
+    for (const type of ["rectangle", "diamond", "ellipse"]) {
+      fireEvent.click(
+        document.querySelector(`[data-testid="change-shape-${type}"]`)!,
+      );
+      expect(window.h.state.selectedElementIds[shape.id]).toBe(true);
+      expect(window.h.elements[0]).toMatchObject({
+        type,
+        id: shape.id,
+        strokeColor: "#ff0000",
+        backgroundColor: "#00ff00",
+        strokeWidth: 4,
+        fillStyle: "solid",
+        width: 180,
+        height: 100,
+      });
+    }
+  });
+});
+
+describe("shape conversion with text", () => {
+  it("preserves bound text, font and undo", async () => {
+    await render(<Excalidraw handleKeyboardGlobally={true} />);
+    const shape = API.createElement({
+      type: "rectangle",
+      width: 240,
+      height: 160,
+    });
+    const text = API.createElement({
+      type: "text",
+      text: "Text",
+      containerId: shape.id,
+      fontSize: 20,
+      fontFamily: FONT_FAMILY.Helvetica,
+      strokeColor: "#ff0000",
+    });
+    window.h.app.scene.mutateElement(shape, {
+      boundElements: [{ id: text.id, type: "text" }],
+    });
+    API.updateScene({
+      elements: [shape, text],
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    });
+    API.setSelectedElements([shape]);
+    fireEvent.click(
+      document.querySelector('[data-testid="change-shape-diamond"]')!,
+    );
+    expect(window.h.elements[0]).toMatchObject({
+      type: "diamond",
+      boundElements: [{ id: text.id, type: "text" }],
+    });
+    expect(window.h.elements[1]).toMatchObject({
+      containerId: shape.id,
+      originalText: "Text",
+      fontSize: 20,
+      fontFamily: FONT_FAMILY.Helvetica,
+      strokeColor: "#ff0000",
+    });
+    Keyboard.undo();
+    expect(window.h.elements[0].type).toBe("rectangle");
+    Keyboard.redo();
+    expect(window.h.elements[0].type).toBe("diamond");
   });
 });

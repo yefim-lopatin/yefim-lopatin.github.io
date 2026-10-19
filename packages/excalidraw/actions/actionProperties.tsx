@@ -101,6 +101,9 @@ import { FontPicker } from "../components/FontPicker/FontPicker";
 import { IconPicker } from "../components/IconPicker";
 import { Range } from "../components/Range";
 import {
+  RectangleIcon,
+  DiamondIcon,
+  EllipseIcon,
   ArrowheadArrowIcon,
   ArrowheadBarIcon,
   ArrowheadCircleIcon,
@@ -2214,6 +2217,94 @@ export const actionChangeArrowType = register<keyof typeof ARROW_TYPE>({
                 hasSelection ? null : appState.currentItemArrowType,
             )}
             onChange={(value) => updateData(value)}
+          />
+        </div>
+      </fieldset>
+    );
+  },
+});
+
+type ConvertibleShape = "rectangle" | "ellipse" | "diamond";
+
+const isConvertibleShape = (element: ExcalidrawElement) =>
+  element.type === "rectangle" ||
+  element.type === "ellipse" ||
+  element.type === "diamond";
+
+export const actionChangeShape = register<ConvertibleShape>({
+  name: "changeShape",
+  label: "labels.changeShape",
+  trackEvent: false,
+  perform: (elements, appState, value, app) => {
+    const nextElements = changeProperty(elements, appState, (element) =>
+      !element.locked && isConvertibleShape(element) && element.type !== value
+        ? newElementWith(element, { type: value })
+        : element,
+    );
+    const changedElements = new Map(
+      nextElements
+        .filter((element, index) => element !== elements[index])
+        .map((element) => [element.id, element]),
+    );
+    for (const element of changedElements.values()) {
+      if (!isNonDeletedElement(element)) {
+        continue;
+      }
+      const text = getBoundTextElement(
+        element,
+        app.scene.getNonDeletedElementsMap(),
+      );
+      if (text) {
+        redrawTextBoundingBox(text, element, app.scene);
+      }
+      updateBoundElements(element, app.scene, { changedElements });
+    }
+    return {
+      elements: nextElements,
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+  PanelComponent: ({ elements, appState, updateData }) => {
+    const selected = getSelectedElements(elements, appState);
+    if (
+      !selected.length ||
+      !selected.every(
+        (element) => !element.locked && isConvertibleShape(element),
+      )
+    ) {
+      return null;
+    }
+    const value = selected.every((element) => element.type === selected[0].type)
+      ? (selected[0].type as ConvertibleShape)
+      : null;
+    return (
+      <fieldset>
+        <legend>{t("labels.changeShape")}</legend>
+        <div className="buttonList">
+          <RadioSelection<ConvertibleShape>
+            group="changeShape"
+            value={value}
+            onChange={updateData}
+            options={[
+              {
+                value: "rectangle",
+                text: t("toolBar.rectangle"),
+                icon: RectangleIcon,
+                testId: "change-shape-rectangle",
+              },
+              {
+                value: "ellipse",
+                text: t("toolBar.ellipse"),
+                icon: EllipseIcon,
+                testId: "change-shape-ellipse",
+              },
+              {
+                value: "diamond",
+                text: t("toolBar.diamond"),
+                icon: DiamondIcon,
+                testId: "change-shape-diamond",
+              },
+            ]}
           />
         </div>
       </fieldset>

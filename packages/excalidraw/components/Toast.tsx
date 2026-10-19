@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { CloseIcon } from "./icons";
 import { IconButton } from "./IconButton";
@@ -34,35 +34,19 @@ const ToastComponent = ({
   duration?: number;
   style?: CSSProperties;
 }) => {
-  const timerRef = useRef<number>(0);
-  const shouldAutoClose = duration !== Infinity;
-  const scheduleTimeout = useCallback(() => {
-    if (!shouldAutoClose) {
-      return;
-    }
-    timerRef.current = window.setTimeout(() => onClose(), duration);
-  }, [onClose, duration, shouldAutoClose]);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
-    if (!shouldAutoClose) {
+    if (duration === Infinity) {
       return;
     }
-    scheduleTimeout();
-    return () => clearTimeout(timerRef.current);
-  }, [scheduleTimeout, message, duration, shouldAutoClose]);
+    const timer = window.setTimeout(() => onCloseRef.current(), duration);
+    return () => clearTimeout(timer);
+  }, [message, duration]);
 
-  const onMouseEnter = shouldAutoClose
-    ? () => clearTimeout(timerRef?.current)
-    : undefined;
-  const onMouseLeave = shouldAutoClose ? scheduleTimeout : undefined;
   return (
-    <div
-      className="Toast"
-      role="status"
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      style={style}
-    >
+    <div className="Toast" role="status" style={style}>
       <div className="Toast__message">{message}</div>
       {closable && (
         <IconButton
