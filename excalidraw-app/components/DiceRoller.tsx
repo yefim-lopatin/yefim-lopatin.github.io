@@ -472,8 +472,8 @@ export const DiceRoller = ({ excalidrawAPI, getUsername }: DiceRollerProps) => {
                       <button
                         type="button"
                         aria-label="Уменьшить сложность"
-                        disabled={difficulty === 1}
-                        onClick={() => setDifficulty((n) => Math.max(1, n - 1))}
+                        disabled={difficulty === 0}
+                        onClick={() => setDifficulty((n) => Math.max(0, n - 1))}
                       >
                         −
                       </button>
@@ -492,6 +492,9 @@ export const DiceRoller = ({ excalidrawAPI, getUsername }: DiceRollerProps) => {
                       </button>
                     </div>
                   </div>
+                  {difficulty === 0 && (
+                    <small>Состязание: сравните успехи с соперником</small>
+                  )}
                 </div>
               )}
             </>

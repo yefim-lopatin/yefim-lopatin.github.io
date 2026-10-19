@@ -61,6 +61,9 @@ export const getV5Result = (
       ? "успеха"
       : "успехов"
   }`;
+  if (difficulty === 0) {
+    return `Состязание — ${count}`;
+  }
   if (successes < difficulty) {
     if (hungerDice.includes(1)) {
       return `Кровавый провал — ${count}`;

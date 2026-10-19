@@ -268,6 +268,16 @@ describe("DiceRoller", () => {
     );
     expect(screen.getByLabelText("Сложность проверки").textContent).toBe("1");
 
+    const decreaseDifficulty = screen.getByRole("button", {
+      name: "Уменьшить сложность",
+    });
+    fireEvent.click(decreaseDifficulty);
+    expect(screen.getByLabelText("Сложность проверки").textContent).toBe("0");
+    expect(decreaseDifficulty.hasAttribute("disabled")).toBe(true);
+    expect(
+      screen.getByText("Состязание: сравните успехи с соперником"),
+    ).toBeTruthy();
+
     for (let i = 0; i < 12; i++) {
       fireEvent.click(increase);
     }
