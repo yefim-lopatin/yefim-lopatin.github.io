@@ -303,3 +303,48 @@
   gap: 0.75rem;
   flex-basis: 100%;
 }
+
+.dice-roller__sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding-top: 1.75rem;
+  width: min(20rem, calc(100vw - 4rem));
+}
+
+.dice-roller__sections button {
+  min-height: 6rem;
+  border: 1px solid var(--default-border-color);
+  border-radius: var(--border-radius-lg);
+  background: var(--color-surface-low);
+  color: inherit;
+  font: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.dice-roller__sections small {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.dice-roller__back {
+  border: 0;
+  border-radius: var(--border-radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.dice-roller__sections button:hover,
+.dice-roller__back:hover {
+  background: var(--button-hover-bg);
+}
+
+.dice-roller__grid--vtm {
+  grid-template-columns: 4rem;
+  padding-top: 0.75rem;
+}

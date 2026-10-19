@@ -120,18 +120,18 @@ def regular(sides, result):
 
 def v5(symbol):
     pen = TTGlyphPen(None)
-    shape, _, _ = contour(10)
+    shape = stroke("M32 4L56 18V46L32 60L8 46V18Z", 2)
     draw_geometry(pen, shape)
     svg = ET.parse(ROOT / f"excalidraw-app/components/v5-symbols/{symbol}.svg").getroot()
     _, _, width, height = map(float, svg.attrib["viewBox"].split())
-    scale = min(16 / width, 12 / height)
+    scale = min(30 / width, 32 / height)
     for node in svg.iter():
         if node.tag.endswith("path"):
             filled = Polygon()
             for points in path_lines(node.attrib["d"]):
                 filled = filled.symmetric_difference(Polygon(points).buffer(0))
             filled = affinity.scale(filled, scale, scale, origin=(0, 0))
-            draw_geometry(pen, affinity.translate(filled, xoff=32 - width * scale / 2, yoff=27 - height * scale / 2))
+            draw_geometry(pen, affinity.translate(filled, xoff=32 - width * scale / 2, yoff=32 - height * scale / 2))
     return pen.glyph(), 1024
 
 

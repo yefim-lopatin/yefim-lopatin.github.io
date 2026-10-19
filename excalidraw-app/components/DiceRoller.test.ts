@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -44,6 +44,7 @@ vi.mock("./DiceThrow", () => ({
 }));
 
 describe("DiceRoller", () => {
+  beforeEach(() => localStorage.removeItem("dice-roller-section"));
   it("keeps deletion records so a roll increases the collaboration scene version", () => {
     const deleted = {
       ...newElement({ type: "rectangle", x: 0, y: 0, width: 10, height: 10 }),
@@ -66,6 +67,7 @@ describe("DiceRoller", () => {
     } as unknown as ExcalidrawImperativeAPI;
     render(createElement(DiceRoller, { excalidrawAPI }));
     fireEvent.keyDown(window, { key: "d", code: "KeyD" });
+    fireEvent.click(screen.getByRole("button", { name: "Dice" }));
     const pointer = (
       target: Element | Window,
       type: string,
@@ -111,6 +113,24 @@ describe("DiceRoller", () => {
     expect(getSceneVersion(elements)).toBeGreaterThan(
       getSceneVersion([deleted]),
     );
+  });
+
+  it("remembers the personal section after hiding and remounting", () => {
+    const view = render(createElement(DiceRoller, { excalidrawAPI: null }));
+    const toggle = () => fireEvent.keyDown(window, { key: "d", code: "KeyD" });
+    toggle();
+    fireEvent.click(screen.getByRole("button", { name: /VTM/ }));
+    toggle();
+    toggle();
+    expect(screen.getByRole("switch", { name: "Кубики голода" })).toBeTruthy();
+    view.unmount();
+    render(createElement(DiceRoller, { excalidrawAPI: null }));
+    toggle();
+    expect(screen.getByRole("switch", { name: "Кубики голода" })).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Назад к выбору кубиков" }),
+    );
+    expect(screen.getByRole("button", { name: "Dice" })).toBeTruthy();
   });
 
   it("contains the standard RPG dice", () => {
@@ -204,9 +224,11 @@ describe("DiceRoller", () => {
     expect(screen.queryByRole("dialog", { name: "Кубики" })).toBeNull();
   });
 
-  it("keeps quantity controls visible and toggles Hunger up to ten", () => {
+  it("separates ordinary dice from VTM and toggles Hunger up to ten", () => {
     render(createElement(DiceRoller, { excalidrawAPI: null }));
     fireEvent.keyDown(window, { key: "d", code: "KeyD" });
+    fireEvent.click(screen.getByRole("button", { name: "Dice" }));
+    expect(screen.queryByRole("switch")).toBeNull();
     for (const sides of DICE_SIDES) {
       expect(
         screen.getByRole("button", { name: `Увеличить количество d${sides}` }),
@@ -220,6 +242,13 @@ describe("DiceRoller", () => {
         name: "Перетащить 2 кубик(а) d10 на холст",
       }),
     ).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Назад к выбору кубиков" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /VTM/ }));
+    expect(
+      screen.queryByRole("button", { name: "Увеличить количество d20" }),
+    ).toBeNull();
     const increase = screen.getByRole("button", {
       name: "Увеличить кубики голода",
     });
@@ -277,6 +306,7 @@ describe("DiceRoller", () => {
     render(createElement(DiceRoller, { excalidrawAPI: null }));
 
     fireEvent.keyDown(window, { key: "d", code: "KeyD" });
+    fireEvent.click(screen.getByRole("button", { name: "Dice" }));
     fireEvent.pointerDown(
       screen.getByRole("button", {
         name: "Перетащить 1 кубик(а) d20 на холст",

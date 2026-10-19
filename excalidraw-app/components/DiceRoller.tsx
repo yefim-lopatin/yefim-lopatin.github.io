@@ -96,6 +96,26 @@ const createInitialDiceCounts = (): Record<DiceSides, number> => ({
 
 export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [section, setSection] = useState<"dice" | "vtm" | null>(() => {
+    try {
+      const saved = localStorage.getItem("dice-roller-section");
+      return saved === "dice" || saved === "vtm" ? saved : null;
+    } catch {
+      return null;
+    }
+  });
+  const selectSection = (next: "dice" | "vtm" | null) => {
+    setSection(next);
+    try {
+      if (next) {
+        localStorage.setItem("dice-roller-section", next);
+      } else {
+        localStorage.removeItem("dice-roller-section");
+      }
+    } catch {
+      // Keep the choice for this session if browser storage is unavailable.
+    }
+  };
   const [hunger, setHunger] = useState(0);
   const [hungerEnabled, setHungerEnabled] = useState(false);
   const [difficulty, setDifficulty] = useState(1);
@@ -152,15 +172,19 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         sides,
         count,
         results,
-        hunger: getHungerCount(sides, count, hungerEnabled ? hunger : 0),
-        difficulty: hungerEnabled && sides === 10 ? difficulty : undefined,
+        hunger: getHungerCount(
+          sides,
+          count,
+          section === "vtm" && hungerEnabled ? hunger : 0,
+        ),
+        difficulty: section === "vtm" && sides === 10 ? difficulty : undefined,
         clientX,
         clientY,
       };
 
       setRollAnimation(roll);
     },
-    [hunger, hungerEnabled, difficulty],
+    [hunger, hungerEnabled, difficulty, section],
   );
 
   useEffect(() => {
@@ -333,101 +357,138 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
             ×
           </button>
 
-          <div className="dice-roller__grid">
-            {DICE_SIDES.map((sides) => {
-              const count = diceCounts[sides];
-              return (
-                <div className="dice-roller__die-wrapper" key={sides}>
+          {section === null ? (
+            <div className="dice-roller__sections">
+              <button type="button" onClick={() => selectSection("dice")}>
+                Dice
+              </button>
+              <button type="button" onClick={() => selectSection("vtm")}>
+                VTM<small>Вампиры: Маскарад</small>
+              </button>
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="dice-roller__back"
+                onClick={() => selectSection(null)}
+                aria-label="Назад к выбору кубиков"
+              >
+                ← Назад
+              </button>
+              <div
+                className={`dice-roller__grid${
+                  section === "vtm" ? " dice-roller__grid--vtm" : ""
+                }`}
+              >
+                {(section === "vtm" ? [10 as const] : DICE_SIDES).map(
+                  (sides) => {
+                    const count = diceCounts[sides];
+                    return (
+                      <div className="dice-roller__die-wrapper" key={sides}>
+                        <div className="dice-roller__quantity-controls">
+                          <button
+                            type="button"
+                            aria-label={`Уменьшить количество d${sides}`}
+                            disabled={count === 1}
+                            onClick={() => updateDiceCount(sides, -1)}
+                          >
+                            −
+                          </button>
+                          <output aria-label={`Количество d${sides}`}>
+                            {count}
+                          </output>
+                          <button
+                            type="button"
+                            aria-label={`Увеличить количество d${sides}`}
+                            disabled={count === MAX_DICE_COUNT}
+                            onClick={() => updateDiceCount(sides, 1)}
+                          >
+                            +
+                          </button>
+                        </div>
+                        <button
+                          className="dice-roller__die"
+                          type="button"
+                          aria-label={`Перетащить ${count} кубик(а) d${sides} на холст`}
+                          aria-grabbed={dragPreview?.sides === sides}
+                          onPointerDown={(event) =>
+                            handleDiePointerDown(event, sides)
+                          }
+                        >
+                          <DiceIcon sides={sides} />
+                        </button>
+                      </div>
+                    );
+                  },
+                )}
+              </div>
+              {section === "vtm" && (
+                <div className="dice-roller__hunger">
+                  <label className="dice-roller__hunger-toggle">
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      checked={hungerEnabled}
+                      onChange={(event) =>
+                        setHungerEnabled(event.target.checked)
+                      }
+                    />
+                    <span className="dice-roller__switch" aria-hidden="true" />
+                    <span>Кубики голода</span>
+                  </label>
                   <div className="dice-roller__quantity-controls">
                     <button
                       type="button"
-                      aria-label={`Уменьшить количество d${sides}`}
-                      disabled={count === 1}
-                      onClick={() => updateDiceCount(sides, -1)}
+                      aria-label="Уменьшить кубики голода"
+                      disabled={!hungerEnabled || hunger === 0}
+                      onClick={() => setHunger((n) => Math.max(0, n - 1))}
                     >
                       −
                     </button>
-                    <output aria-label={`Количество d${sides}`}>{count}</output>
+                    <output aria-label="Количество кубиков голода">
+                      {hunger}
+                    </output>
                     <button
                       type="button"
-                      aria-label={`Увеличить количество d${sides}`}
-                      disabled={count === MAX_DICE_COUNT}
-                      onClick={() => updateDiceCount(sides, 1)}
+                      aria-label="Увеличить кубики голода"
+                      disabled={!hungerEnabled || hunger === 10}
+                      onClick={() => setHunger((n) => Math.min(10, n + 1))}
                     >
                       +
                     </button>
                   </div>
-                  <button
-                    className="dice-roller__die"
-                    type="button"
-                    aria-label={`Перетащить ${count} кубик(а) d${sides} на холст`}
-                    aria-grabbed={dragPreview?.sides === sides}
-                    onPointerDown={(event) =>
-                      handleDiePointerDown(event, sides)
-                    }
-                  >
-                    <DiceIcon sides={sides} />
-                  </button>
+                  <small>Заменяют обычные d10 в броске</small>
+                  <div className="dice-roller__difficulty">
+                    <span>Сложность</span>
+                    <div className="dice-roller__quantity-controls">
+                      <button
+                        type="button"
+                        aria-label="Уменьшить сложность"
+                        disabled={difficulty === 1}
+                        onClick={() => setDifficulty((n) => Math.max(1, n - 1))}
+                      >
+                        −
+                      </button>
+                      <output aria-label="Сложность проверки">
+                        {difficulty}
+                      </output>
+                      <button
+                        type="button"
+                        aria-label="Увеличить сложность"
+                        disabled={difficulty === 40}
+                        onClick={() =>
+                          setDifficulty((n) => Math.min(40, n + 1))
+                        }
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-          <div className="dice-roller__hunger">
-            <label className="dice-roller__hunger-toggle">
-              <input
-                type="checkbox"
-                role="switch"
-                checked={hungerEnabled}
-                onChange={(event) => setHungerEnabled(event.target.checked)}
-              />
-              <span className="dice-roller__switch" aria-hidden="true" />
-              <span>Кубики голода</span>
-            </label>
-            <div className="dice-roller__quantity-controls">
-              <button
-                type="button"
-                aria-label="Уменьшить кубики голода"
-                disabled={!hungerEnabled || hunger === 0}
-                onClick={() => setHunger((n) => Math.max(0, n - 1))}
-              >
-                −
-              </button>
-              <output aria-label="Количество кубиков голода">{hunger}</output>
-              <button
-                type="button"
-                aria-label="Увеличить кубики голода"
-                disabled={!hungerEnabled || hunger === 10}
-                onClick={() => setHunger((n) => Math.min(10, n + 1))}
-              >
-                +
-              </button>
-            </div>
-            <small>Заменяют обычные d10 в броске</small>
-            {hungerEnabled && (
-              <div className="dice-roller__difficulty">
-                <span>Сложность</span>
-                <div className="dice-roller__quantity-controls">
-                  <button
-                    type="button"
-                    aria-label="Уменьшить сложность"
-                    disabled={difficulty === 1}
-                    onClick={() => setDifficulty((n) => Math.max(1, n - 1))}
-                  >
-                    −
-                  </button>
-                  <output aria-label="Сложность проверки">{difficulty}</output>
-                  <button
-                    type="button"
-                    aria-label="Увеличить сложность"
-                    disabled={difficulty === 40}
-                    onClick={() => setDifficulty((n) => Math.min(40, n + 1))}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </>
+          )}
         </div>
       )}
 

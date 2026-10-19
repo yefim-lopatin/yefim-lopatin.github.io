@@ -3,6 +3,11 @@
     $closeButtonSize: 1.2rem;
     $closeButtonPadding: 0.4rem;
 
+    position: fixed;
+    top: calc(5rem + env(safe-area-inset-top, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: var(--zIndex-toast);
     animation: Toast-fade-in 0.5s;
     min-width: 220px;
     max-width: min(360px, calc(100vw - 32px));
