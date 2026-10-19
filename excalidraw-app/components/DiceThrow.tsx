@@ -9,6 +9,7 @@ type Props = {
   sides: DiceSides;
   count: number;
   hunger: number;
+  difficulty?: number;
   clientX: number;
   clientY: number;
   onComplete: (result: ThrowResult) => void;

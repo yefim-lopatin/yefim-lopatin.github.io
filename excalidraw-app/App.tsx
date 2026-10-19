@@ -1037,7 +1037,14 @@ const ExcalidrawWrapper = () => {
         }}
       >
         <ToolbarAction>
-          <DiceRoller excalidrawAPI={excalidrawAPI} />
+          <DiceRoller
+            excalidrawAPI={excalidrawAPI}
+            getUsername={() =>
+              collabAPI?.getUsername() ||
+              importUsernameFromLocalStorage() ||
+              "Игрок"
+            }
+          />
         </ToolbarAction>
         <AppMainMenu
           onCollabDialogOpen={onCollabDialogOpen}

@@ -116,6 +116,7 @@ export const animateDice = async (
     sides: DiceSides;
     count: number;
     hunger: number;
+    difficulty?: number;
     clientX: number;
     clientY: number;
   },
@@ -123,7 +124,7 @@ export const animateDice = async (
   reportResult?: (result: ThrowResult) => void,
 ) => {
   const symbols = new Map<string, HTMLImageElement>();
-  if (options.hunger > 0) {
+  if (options.difficulty !== undefined || options.hunger > 0) {
     await Promise.all(
       [false, true].flatMap((hunger) =>
         Array.from({ length: 10 }, async (_, i) => {
@@ -216,7 +217,12 @@ export const animateDice = async (
       const geometry = geometryFor(sides);
       const { vertices, faces } = facesFor(geometry);
       const material = new THREE.MeshStandardMaterial({
-        color: options.hunger > 0 ? 0xffffff : index % 2 ? 0x7149cc : 0x365edc,
+        color:
+          options.difficulty !== undefined || options.hunger > 0
+            ? 0xffffff
+            : index % 2
+            ? 0x7149cc
+            : 0x365edc,
         roughness: 0.32,
         metalness: 0.15,
         flatShading: true,
@@ -224,7 +230,7 @@ export const animateDice = async (
       const mesh = new THREE.Mesh(geometry, material);
       resources.push(geometry, material);
       scene.add(mesh);
-      if (options.hunger > 0) {
+      if (options.difficulty !== undefined || options.hunger > 0) {
         const edges = new THREE.EdgesGeometry(geometry);
         const edgeMaterial = new THREE.LineBasicMaterial({
           color: index < options.hunger ? 0xb52025 : 0x333333,
@@ -248,7 +254,7 @@ export const animateDice = async (
               ? String(i * 10).padStart(2, "0")
               : String(i)
             : String(i + 1);
-        if (options.hunger > 0) {
+        if (options.difficulty !== undefined || options.hunger > 0) {
           const image = symbols.get(
             getV5Symbol(i + 1, index < options.hunger),
           )!;

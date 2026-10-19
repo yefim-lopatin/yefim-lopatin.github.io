@@ -19,6 +19,8 @@ import { IconButton } from "@excalidraw/excalidraw/components/IconButton";
 
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 
+import { historyRequest } from "./diceHistoryApi";
+import { getDieCharacter } from "./diceText";
 import { DiceIcon } from "./DiceIcons";
 import { DiceThrow } from "./DiceThrow";
 import { DICE_SIDES } from "./diceSvg";
@@ -27,6 +29,7 @@ import { createDiceText } from "./diceText";
 import { getHungerCount } from "./v5Dice";
 
 import "./DiceRoller.scss";
+import "./DiceHistory.scss";
 
 import type { DiceSides } from "./diceSvg";
 
@@ -59,6 +62,7 @@ export const rollDie = (sides: number): number => {
 
 type DiceRollerProps = {
   excalidrawAPI: ExcalidrawImperativeAPI | null;
+  getUsername?: () => string;
 };
 
 type DragState = {
@@ -94,7 +98,7 @@ const createInitialDiceCounts = (): Record<DiceSides, number> => ({
   100: 1,
 });
 
-export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
+export const DiceRoller = ({ excalidrawAPI, getUsername }: DiceRollerProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [section, setSection] = useState<"dice" | "vtm" | null>(() => {
     try {
@@ -117,7 +121,6 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
     }
   };
   const [hunger, setHunger] = useState(0);
-  const [hungerEnabled, setHungerEnabled] = useState(false);
   const [difficulty, setDifficulty] = useState(1);
   const [diceCounts, setDiceCounts] = useState(createInitialDiceCounts);
   const [dragPreview, setDragPreview] = useState<DragState | null>(null);
@@ -154,6 +157,19 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         isDarkTheme: appState.theme === "dark",
       });
 
+      void historyRequest("POST", {
+        id: roll.id,
+        username: getUsername?.().trim().slice(0, 100) || "Игрок",
+        sides: roll.sides,
+        results: roll.results,
+        hunger: roll.hunger,
+        difficulty: roll.difficulty,
+      }).catch(() =>
+        excalidrawAPI.setToast({
+          message: "Бросок на доске сохранён, но историю записать не удалось",
+        }),
+      );
+
       // updateScene triggers App.onChange, which broadcasts the result to all
       // collaborators through the existing collaboration channel.
       excalidrawAPI.updateScene({
@@ -161,7 +177,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       });
     },
-    [excalidrawAPI],
+    [excalidrawAPI, getUsername],
   );
 
   const startRollAtPoint = useCallback(
@@ -172,11 +188,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
         sides,
         count,
         results,
-        hunger: getHungerCount(
-          sides,
-          count,
-          section === "vtm" && hungerEnabled ? hunger : 0,
-        ),
+        hunger: getHungerCount(sides, count, section === "vtm" ? hunger : 0),
         difficulty: section === "vtm" && sides === 10 ? difficulty : undefined,
         clientX,
         clientY,
@@ -184,7 +196,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
 
       setRollAnimation(roll);
     },
-    [hunger, hungerEnabled, difficulty, section],
+    [hunger, difficulty, section],
   );
 
   useEffect(() => {
@@ -416,7 +428,13 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
                             handleDiePointerDown(event, sides)
                           }
                         >
-                          <DiceIcon sides={sides} />
+                          {section === "vtm" ? (
+                            <span className="dice-history__glyph">
+                              {getDieCharacter(10, 6, true)}
+                            </span>
+                          ) : (
+                            <DiceIcon sides={sides} />
+                          )}
                         </button>
                       </div>
                     );
@@ -425,23 +443,12 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
               </div>
               {section === "vtm" && (
                 <div className="dice-roller__hunger">
-                  <label className="dice-roller__hunger-toggle">
-                    <input
-                      type="checkbox"
-                      role="switch"
-                      checked={hungerEnabled}
-                      onChange={(event) =>
-                        setHungerEnabled(event.target.checked)
-                      }
-                    />
-                    <span className="dice-roller__switch" aria-hidden="true" />
-                    <span>Кубики голода</span>
-                  </label>
+                  <span>Кубики голода</span>
                   <div className="dice-roller__quantity-controls">
                     <button
                       type="button"
                       aria-label="Уменьшить кубики голода"
-                      disabled={!hungerEnabled || hunger === 0}
+                      disabled={hunger === 0}
                       onClick={() => setHunger((n) => Math.max(0, n - 1))}
                     >
                       −
@@ -452,7 +459,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
                     <button
                       type="button"
                       aria-label="Увеличить кубики голода"
-                      disabled={!hungerEnabled || hunger === 10}
+                      disabled={hunger === 10}
                       onClick={() => setHunger((n) => Math.min(10, n + 1))}
                     >
                       +
@@ -498,7 +505,13 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
           style={{ left: dragPreview.clientX, top: dragPreview.clientY }}
           aria-hidden="true"
         >
-          <DiceIcon sides={dragPreview.sides} />
+          {section === "vtm" ? (
+            <span className="dice-history__glyph">
+              {getDieCharacter(10, 6, true)}
+            </span>
+          ) : (
+            <DiceIcon sides={dragPreview.sides} />
+          )}
           <span>
             d{dragPreview.sides} × {dragPreview.count}
           </span>
@@ -511,6 +524,7 @@ export const DiceRoller = ({ excalidrawAPI }: DiceRollerProps) => {
           sides={rollAnimation.sides}
           count={rollAnimation.count}
           hunger={rollAnimation.hunger}
+          difficulty={rollAnimation.difficulty}
           clientX={rollAnimation.clientX}
           clientY={rollAnimation.clientY}
           onResult={({ results }) => {

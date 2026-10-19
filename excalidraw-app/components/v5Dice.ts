@@ -1,5 +1,3 @@
-import { drawBoardDie } from "./BoardDice";
-
 import blackDot from "./v5-symbols/black-dot.svg?raw";
 import blackSuccess from "./v5-symbols/black-success.svg?raw";
 import blackTriumph from "./v5-symbols/black-triumph.svg?raw";
@@ -25,15 +23,24 @@ export const getHungerCount = (sides: number, count: number, hunger: number) =>
   sides === 10 ? Math.min(count, Math.max(0, Math.min(10, hunger))) : 0;
 
 export const createV5DieSvg = (result: number, hunger: boolean) => {
-  const symbol = getV5Symbol(result, hunger)
-    .replace(/<svg\b/, '<svg x="24" y="21"')
-    .replace(/width="[^"]*"/, 'width="16"')
-    .replace(/height="[^"]*"/, 'height="12"');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">${drawBoardDie(
-    10,
-    hunger ? "#b52025" : "#333333",
-    "#ffffff",
-  )}${symbol}</svg>`;
+  const raw = getV5Symbol(result, hunger);
+  const viewBox = raw
+    .match(/viewBox="([^"]+)"/)![1]
+    .split(" ")
+    .map(Number);
+  const scale = Math.min(30 / viewBox[2], 32 / viewBox[3]);
+  const symbol = raw
+    .replace(
+      /<svg\b/,
+      `<svg x="${32 - (viewBox[2] * scale) / 2}" y="${
+        32 - (viewBox[3] * scale) / 2
+      }"`,
+    )
+    .replace(/width="[^"]*"/, `width="${viewBox[2] * scale}"`)
+    .replace(/height="[^"]*"/, `height="${viewBox[3] * scale}"`);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><path d="M32 4L56 18V46L32 60L8 46V18Z" fill="none" stroke="${
+    hunger ? "#b52025" : "#333333"
+  }" stroke-width="2"/>${symbol}</svg>`;
 };
 
 export const getV5Result = (

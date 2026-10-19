@@ -19,6 +19,10 @@ import {
   rollDie,
 } from "./DiceRoller";
 
+vi.mock("./diceHistoryApi", () => ({
+  historyRequest: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock("./DiceThrow", () => ({
   DiceThrow: ({
     onResult,
@@ -122,11 +126,11 @@ describe("DiceRoller", () => {
     fireEvent.click(screen.getByRole("button", { name: /VTM/ }));
     toggle();
     toggle();
-    expect(screen.getByRole("switch", { name: "Кубики голода" })).toBeTruthy();
+    expect(screen.getByLabelText("Количество кубиков голода")).toBeTruthy();
     view.unmount();
     render(createElement(DiceRoller, { excalidrawAPI: null }));
     toggle();
-    expect(screen.getByRole("switch", { name: "Кубики голода" })).toBeTruthy();
+    expect(screen.getByLabelText("Количество кубиков голода")).toBeTruthy();
     fireEvent.click(
       screen.getByRole("button", { name: "Назад к выбору кубиков" }),
     );
@@ -224,7 +228,7 @@ describe("DiceRoller", () => {
     expect(screen.queryByRole("dialog", { name: "Кубики" })).toBeNull();
   });
 
-  it("separates ordinary dice from VTM and toggles Hunger up to ten", () => {
+  it("separates ordinary dice from VTM and adjusts Hunger from zero to ten", () => {
     render(createElement(DiceRoller, { excalidrawAPI: null }));
     fireEvent.keyDown(window, { key: "d", code: "KeyD" });
     fireEvent.click(screen.getByRole("button", { name: "Dice" }));
@@ -253,8 +257,7 @@ describe("DiceRoller", () => {
       name: "Увеличить кубики голода",
     });
     expect(screen.queryByText("×2")).toBeNull();
-    expect(increase.hasAttribute("disabled")).toBe(true);
-    fireEvent.click(screen.getByRole("switch", { name: "Кубики голода" }));
+    expect(increase.hasAttribute("disabled")).toBe(false);
     expect(screen.getByLabelText("Сложность проверки").textContent).toBe("1");
     fireEvent.click(
       screen.getByRole("button", { name: "Увеличить сложность" }),
@@ -272,7 +275,11 @@ describe("DiceRoller", () => {
       "10",
     );
     expect(increase.hasAttribute("disabled")).toBe(true);
-    fireEvent.click(screen.getByRole("switch", { name: "Кубики голода" }));
+    for (let i = 0; i < 10; i++) {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Уменьшить кубики голода" }),
+      );
+    }
     expect(
       screen
         .getByRole("button", { name: "Уменьшить кубики голода" })
