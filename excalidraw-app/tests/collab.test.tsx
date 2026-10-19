@@ -76,6 +76,44 @@ vi.mock("socket.io-client", () => {
  * i.e. multiplayer history tests could be a good first candidate, as we could test both history stacks simultaneously.
  */
 describe("collaboration", () => {
+  it("retries scene and image persistence periodically without new edits", () => {
+    let repeat: () => void;
+    const interval = vi
+      .spyOn(window, "setInterval")
+      .mockImplementation((callback) => {
+        repeat = callback as () => void;
+        return 123 as unknown as ReturnType<typeof window.setInterval>;
+      });
+    const clear = vi.spyOn(window, "clearInterval");
+    const excalidrawAPI = {
+      onUserFollow: () => () => {},
+      onScrollChange: () => () => {},
+      getSceneElementsIncludingDeleted: () => [],
+    } as unknown as ExcalidrawImperativeAPI;
+    const collab = new Collab({ excalidrawAPI });
+    const save = vi
+      .spyOn(collab, "saveCollabRoomToFirebase")
+      .mockResolvedValue();
+    const upload = vi
+      .spyOn(collab.portal, "queueFileUpload")
+      .mockResolvedValue(undefined);
+    try {
+      collab.componentDidMount();
+      collab.portal.socketInitialized = true;
+      repeat!();
+      expect(save).toHaveBeenCalledWith([]);
+      expect(upload).toHaveBeenCalledTimes(1);
+      collab.portal.socketInitialized = false;
+      repeat!();
+      expect(upload).toHaveBeenCalledTimes(1);
+      collab.componentWillUnmount();
+      expect(clear).toHaveBeenCalledWith(123);
+    } finally {
+      interval.mockRestore();
+      clear.mockRestore();
+    }
+  });
+
   it("restores received dice before rendering without downloading image files", async () => {
     const files: BinaryFiles = {};
     const elements = syncInvalidIndices([

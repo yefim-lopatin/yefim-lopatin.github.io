@@ -32,6 +32,12 @@ import type {
 
 import { FILE_CACHE_MAX_AGE_SEC } from "../app_constants";
 
+import {
+  readBoardData,
+  writeBoardData,
+  usesBoardStorage,
+} from "./boardStorage";
+
 import { getSyncableElements } from ".";
 
 import type { SyncableExcalidrawElement } from ".";
@@ -145,22 +151,35 @@ export const isSavedToFirebase = (
 export const saveFilesToFirebase = async ({
   prefix,
   files,
+  roomKey,
 }: {
   prefix: string;
+  roomKey?: string;
   files: { id: FileId; buffer: Uint8Array }[];
 }) => {
-  const storage = await loadFirebaseStorage();
-
   const erroredFiles: FileId[] = [];
   const savedFiles: FileId[] = [];
 
   await Promise.all(
     files.map(async ({ id, buffer }) => {
       try {
-        const storageRef = ref(storage, `${prefix}/${id}`);
-        await uploadBytes(storageRef, buffer, {
-          cacheControl: `public, max-age=${FILE_CACHE_MAX_AGE_SEC}`,
-        });
+        const roomId = /^files\/rooms\/([a-f0-9]{20})$/.exec(prefix)?.[1];
+        if (usesBoardStorage() && roomId && roomKey) {
+          await writeBoardData(
+            roomId,
+            roomKey,
+            `files/${id}`,
+            new Uint8Array(buffer),
+          );
+        } else {
+          const storageRef = ref(
+            await loadFirebaseStorage(),
+            `${prefix}/${id}`,
+          );
+          await uploadBytes(storageRef, buffer, {
+            cacheControl: `public, max-age=${FILE_CACHE_MAX_AGE_SEC}`,
+          });
+        }
         savedFiles.push(id);
       } catch (error: any) {
         erroredFiles.push(id);
@@ -184,6 +203,77 @@ const createFirebaseSceneDocument = async (
   } as FirebaseStoredScene;
 };
 
+const decodeBoardScene = async (
+  bytes: Uint8Array<ArrayBuffer>,
+  roomKey: string,
+) => {
+  const decrypted = await decryptData(
+    bytes.slice(0, 12),
+    bytes.slice(12),
+    roomKey,
+  );
+  return getSyncableElements(
+    restoreElements(JSON.parse(new TextDecoder().decode(decrypted)), null),
+  );
+};
+
+const readLegacyScene = async (roomId: string, roomKey: string) => {
+  const snapshot = await getDoc(doc(_getFirestore(), "scenes", roomId));
+  return snapshot.exists()
+    ? getSyncableElements(
+        restoreElements(
+          await decryptElements(
+            snapshot.data() as FirebaseStoredScene,
+            roomKey,
+          ),
+          null,
+        ),
+      )
+    : null;
+};
+
+const saveBoardScene = async (
+  roomId: string,
+  roomKey: string,
+  elements: readonly SyncableExcalidrawElement[],
+  appState: AppState,
+) => {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const current = await readBoardData(roomId, roomKey, "scene");
+    // Never replace an old room without reading its last Firebase save first.
+    const previous = current
+      ? await decodeBoardScene(current.bytes, roomKey)
+      : await readLegacyScene(roomId, roomKey);
+    const reconciled = previous
+      ? getSyncableElements(
+          reconcileElements(
+            elements,
+            previous as OrderedExcalidrawElement[] as RemoteExcalidrawElement[],
+            appState,
+          ),
+        )
+      : [...elements];
+    const { ciphertext, iv } = await encryptElements(roomKey, reconciled);
+    const bytes = new Uint8Array(iv.length + ciphertext.byteLength);
+    bytes.set(iv);
+    bytes.set(new Uint8Array(ciphertext), iv.length);
+    if (
+      await writeBoardData(
+        roomId,
+        roomKey,
+        "scene",
+        bytes,
+        current?.revision || "missing",
+      )
+    ) {
+      return reconciled;
+    }
+  }
+  throw new Error(
+    "Доску одновременно изменяют другие участники. Сохранение будет повторено.",
+  );
+};
+
 export const saveToFirebase = async (
   portal: Portal,
   elements: readonly SyncableExcalidrawElement[],
@@ -198,6 +288,12 @@ export const saveToFirebase = async (
     isSavedToFirebase(portal, elements)
   ) {
     return null;
+  }
+
+  if (usesBoardStorage()) {
+    const stored = await saveBoardScene(roomId, roomKey, elements, appState);
+    FirebaseSceneVersionCache.set(socket, stored);
+    return toBrandedType<RemoteExcalidrawElement[]>(stored);
   }
 
   const firestore = _getFirestore();
@@ -251,6 +347,24 @@ export const loadFromFirebase = async (
   roomKey: string,
   socket: Socket | null,
 ): Promise<readonly SyncableExcalidrawElement[] | null> => {
+  if (usesBoardStorage()) {
+    const saved = await readBoardData(roomId, roomKey, "scene");
+    let elements;
+    if (saved) {
+      elements = await decodeBoardScene(saved.bytes, roomKey);
+    } else {
+      const legacy = await readLegacyScene(roomId, roomKey);
+      if (!legacy) {
+        return null;
+      }
+      elements = await saveBoardScene(roomId, roomKey, legacy, {} as AppState);
+    }
+    if (socket) {
+      FirebaseSceneVersionCache.set(socket, elements);
+    }
+    return elements;
+  }
+
   const firestore = _getFirestore();
   const docRef = doc(firestore, "scenes", roomId);
   const docSnap = await getDoc(docRef);
@@ -285,9 +399,16 @@ export const loadFilesFromFirebase = async (
         const url = `https://firebasestorage.googleapis.com/v0/b/${
           FIREBASE_CONFIG.storageBucket
         }/o/${encodeURIComponent(prefix.replace(/^\//, ""))}%2F${id}`;
-        const response = await fetch(`${url}?alt=media`);
-        if (response.status < 400) {
-          const arrayBuffer = await response.arrayBuffer();
+        const roomId = /^files\/rooms\/([a-f0-9]{20})$/.exec(prefix)?.[1];
+        const serverFile =
+          usesBoardStorage() && roomId
+            ? await readBoardData(roomId, decryptionKey, `files/${id}`)
+            : null;
+        const response = serverFile ? null : await fetch(`${url}?alt=media`);
+        if (serverFile || response?.ok) {
+          const arrayBuffer = serverFile
+            ? serverFile.bytes.buffer
+            : await response!.arrayBuffer();
 
           const { data, metadata } = await decompressData<BinaryFileMetadata>(
             new Uint8Array(arrayBuffer),
@@ -297,6 +418,15 @@ export const loadFilesFromFirebase = async (
           );
 
           const dataURL = new TextDecoder().decode(data) as DataURL;
+          // Copy legacy encrypted image bytes without changing the old copy.
+          if (!serverFile && usesBoardStorage() && roomId) {
+            await writeBoardData(
+              roomId,
+              decryptionKey,
+              `files/${id}`,
+              new Uint8Array(arrayBuffer),
+            );
+          }
 
           loadedFiles.push({
             mimeType: metadata.mimeType || MIME_TYPES.binary,

@@ -59,7 +59,6 @@ import {
 } from "../components/diceFiles";
 import {
   CURSOR_SYNC_TIMEOUT,
-  FILE_UPLOAD_MAX_BYTES,
   FIREBASE_STORAGE_PREFIXES,
   INITIAL_SCENE_UPDATE_TIMEOUT,
   LOAD_IMAGES_TIMEOUT,
@@ -144,6 +143,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
   idleTimeoutId: number | null;
 
   private socketInitializationTimer?: number;
+  private persistenceIntervalId?: number;
   private lastBroadcastedOrReceivedSceneVersion: number = -1;
   private collaborators = new Map<SocketId, Collaborator>();
   /** the socket ids of the users following the current user */
@@ -176,10 +176,11 @@ class Collab extends PureComponent<CollabProps, CollabState> {
 
         const { savedFiles, erroredFiles } = await saveFilesToFirebase({
           prefix: `${FIREBASE_STORAGE_PREFIXES.collabFiles}/${roomId}`,
+          roomKey,
           files: await encodeFilesForUpload({
             files: addedFiles,
             encryptionKey: roomKey,
-            maxBytes: FILE_UPLOAD_MAX_BYTES,
+            maxBytes: Number.POSITIVE_INFINITY,
           }),
         });
 
@@ -237,6 +238,16 @@ class Collab extends PureComponent<CollabProps, CollabState> {
     };
 
     this.onOfflineStatusToggle();
+    this.persistenceIntervalId = window.setInterval(() => {
+      if (this.portal.socketInitialized && window.navigator.onLine) {
+        this.portal.queueFileUpload();
+        this.saveCollabRoomToFirebase(
+          getSyncableElements(
+            this.excalidrawAPI.getSceneElementsIncludingDeleted(),
+          ),
+        );
+      }
+    }, SYNC_FULL_SCENE_INTERVAL_MS);
 
     const collabAPI: CollabAPI = {
       isCollaborating: this.isCollaborating,
@@ -270,6 +281,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
   };
 
   componentWillUnmount() {
+    window.clearInterval(this.persistenceIntervalId);
     window.removeEventListener("online", this.onOfflineStatusToggle);
     window.removeEventListener("offline", this.onOfflineStatusToggle);
     window.removeEventListener(EVENT.BEFORE_UNLOAD, this.beforeUnload);
