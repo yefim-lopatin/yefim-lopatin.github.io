@@ -8,6 +8,12 @@ import "./DiceHistory.scss";
 
 import type { DiceHistoryEntry } from "./diceHistoryApi";
 
+const checkOwnerKey = (key: string) =>
+  fetch("/api/dice-history/owner", {
+    method: "POST",
+    headers: { "X-Owner-Key": key },
+  });
+
 export const DiceHistory = () => {
   const [rows, setRows] = useState<DiceHistoryEntry[]>([]);
   const [error, setError] = useState("");
@@ -46,13 +52,37 @@ export const DiceHistory = () => {
       window.removeEventListener("hashchange", change);
     };
   }, []);
+  useEffect(() => {
+    const savedKey = sessionStorage.getItem("dice-history-owner-key");
+    if (!savedKey) {
+      return;
+    }
+    let active = true;
+    setBusy(true);
+    void checkOwnerKey(savedKey)
+      .then((response) => {
+        if (active) {
+          setIsOwner(response.ok);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setIsOwner(false);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setBusy(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   const authorize = async () => {
     setBusy(true);
     try {
-      const response = await fetch("/api/dice-history/owner", {
-        method: "POST",
-        headers: { "X-Owner-Key": key },
-      });
+      const response = await checkOwnerKey(key);
       if (!response.ok) {
         throw new Error();
       }

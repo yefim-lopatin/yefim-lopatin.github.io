@@ -11,13 +11,31 @@
   line-height: 1.2;
 }
 
+.excalidraw .sidebar-tabs-root:has(.dice-history),
+.excalidraw .sidebar-tabs-root [role="tabpanel"]:has(.dice-history) {
+  min-height: 0;
+}
+
 .dice-history {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
   padding: 1rem;
   overflow-wrap: anywhere;
   color: var(--color-on-surface);
 }
 
+.dice-history > :not(ol) {
+  flex-shrink: 0;
+}
+
 .dice-history ol {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   list-style: none;
   padding: 0;
 }
