@@ -19,6 +19,7 @@ import {
   isToolButtonDisabled,
   SelectionToolPopover,
   TextToolButton,
+  StickyToolButton,
   TOOLS,
 } from "./Tools";
 
@@ -216,6 +217,7 @@ export const MobileToolbar = ({ app, setAppState }: MobileToolbarProps) => {
 
       {/* Text Tool */}
       {showTextToolOutside && <TextToolButton {...toolProps} hideShortcut />}
+      <StickyToolButton {...toolProps} hideShortcut />
 
       {/* Image */}
       {showImageToolOutside && <ImageToolButton {...toolProps} hideShortcut />}

@@ -109,6 +109,18 @@ export const TOOLS = defineTools({
     icon: FreedrawIcon,
     letterKey: [KEYS.P, KEYS.X],
   },
+  sticky: {
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <path d="M4 3h16v12l-6 6H4Z M14 21v-6h6 M8 8h8 M8 12h5" />
+      </svg>
+    ),
+  },
   text: {
     icon: TextIcon,
     letterKey: KEYS.T,
@@ -322,6 +334,7 @@ export const EllipseToolButton = createToolButton("ellipse");
 export const ArrowToolButton = createToolButton("arrow");
 export const LineToolButton = createToolButton("line");
 export const FreedrawToolButton = createToolButton("freedraw");
+export const StickyToolButton = createToolButton("sticky");
 export const TextToolButton = createToolButton("text");
 export const ImageToolButton = createToolButton("image");
 export const EraserToolButton = createToolButton("eraser");

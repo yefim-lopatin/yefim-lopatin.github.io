@@ -293,6 +293,8 @@ import type { ArrowEndpoint } from "@excalidraw/element";
 
 import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
 
+import { isStickyNote, getStickyTextColor } from "../stickyNote";
+
 import {
   actionAddToLibrary,
   actionBringForward,
@@ -6242,7 +6244,9 @@ class App extends React.Component<AppProps, AppState> {
       onSubmit: withBatchedUpdates(({ viaKeyboard, nextOriginalText }) => {
         this.textWysiwygSubmitHandler = null;
 
-        const isDeleted = !nextOriginalText.trim();
+        const isDeleted =
+          !nextOriginalText.trim() &&
+          !isStickyNote(getContainerElement(element, elementsMap));
         updateElement(nextOriginalText, isDeleted);
 
         // keyboard-submit keeps focus on the edited object. For bound text, keep
@@ -8713,6 +8717,59 @@ class App extends React.Component<AppProps, AppState> {
         });
         pointerDownState.hit.wasAddedToSelection = true;
       }
+    } else if (this.state.activeTool.type === "sticky") {
+      if (this.state.editingTextElement) {
+        return;
+      }
+      const backgroundColor = "#ffec99";
+      const container = newElement({
+        type: "rectangle",
+        x: pointerDownState.origin.x,
+        y: pointerDownState.origin.y,
+        width: 200,
+        height: 200,
+        backgroundColor,
+        strokeColor: "transparent",
+        fillStyle: "solid",
+        strokeWidth: 1,
+        strokeStyle: "solid",
+        roughness: 0,
+        opacity: 100,
+        roundness: null,
+        customData: { stickyNote: true },
+        frameId:
+          this.getTopLayerFrameAtSceneCoords(pointerDownState.origin)?.id ??
+          null,
+      });
+      const text = newTextElement({
+        x: container.x,
+        y: container.y,
+        text: "",
+        fontSize: 20,
+        fontFamily: this.state.currentItemFontFamily,
+        lineHeight: getLineHeight(this.state.currentItemFontFamily),
+        textAlign: "center",
+        verticalAlign: "middle",
+        strokeColor: getStickyTextColor(backgroundColor),
+        backgroundColor: "transparent",
+        fillStyle: "solid",
+        strokeWidth: 1,
+        strokeStyle: "solid",
+        roughness: 0,
+        opacity: 100,
+        containerId: container.id,
+        frameId: container.frameId,
+      });
+      this.scene.mutateElement(container, {
+        boundElements: [{ type: "text", id: text.id }],
+      });
+      this.insertNewElements([container, text]);
+      this.setState({
+        editingTextElement: text,
+        activeTool: updateActiveTool(this.state, { type: "selection" }),
+        selectedElementIds: {},
+      });
+      this.handleTextWysiwyg(text, {});
     } else if (this.state.activeTool.type === "text") {
       this.handleTextOnPointerDown(event, pointerDownState);
     } else if (

@@ -88,6 +88,8 @@ import type {
 
 import type { MarkOptional, Mutable } from "@excalidraw/common/utility-types";
 
+import { isStickyNote } from "../stickyNote";
+
 import { getDefaultAppState } from "../appState";
 
 import {
@@ -226,6 +228,7 @@ export const AllowedExcalidrawActiveTools: Record<
   autoshape: false,
   magicframe: false,
   bucketfill: true,
+  sticky: true,
 };
 
 export type RestoredDataState = {
@@ -555,7 +558,16 @@ export const restoreElement = (
 
       // if empty text, mark as deleted. We keep in array
       // for data integrity purposes (collab etc.)
-      if (opts?.deleteInvisibleElements && !text && !element.isDeleted) {
+      if (
+        opts?.deleteInvisibleElements &&
+        !text &&
+        !element.isDeleted &&
+        !isStickyNote(
+          element.containerId
+            ? targetElementsMap.get(element.containerId)
+            : null,
+        )
+      ) {
         // TODO: we should not do this since it breaks sync / versioning when we exchange / apply just deltas and restore the elements (deletion isn't recorded)
         element = { ...element, originalText: text, isDeleted: true };
         element = bumpVersion(element);

@@ -41,6 +41,7 @@ import {
   SelectionToolButton,
   SelectionToolPopover,
   TextToolButton,
+  StickyToolButton,
 } from "./Tools";
 
 import type {
@@ -288,6 +289,7 @@ export const Toolbar = ({
           <FreedrawToolButton {...toolProps} />
         )}
         <TextToolButton {...toolProps} />
+        <StickyToolButton {...toolProps} hideShortcut />
         {UIOptions.tools?.image !== false && <ImageToolButton {...toolProps} />}
         <EraserToolButton {...toolProps} />
         <ToolbarActionTunnel.Out />

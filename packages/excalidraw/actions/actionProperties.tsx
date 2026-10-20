@@ -93,6 +93,8 @@ import type { ElementUpdate, Scene } from "@excalidraw/element";
 
 import type { CaptureUpdateActionType } from "@excalidraw/element";
 
+import { isStickyNote, getStickyTextColor } from "../stickyNote";
+
 import { trackEvent } from "../analytics";
 import { RadioSelection } from "../components/RadioSelection";
 import { IconButton } from "../components/IconButton";
@@ -449,6 +451,19 @@ export const actionChangeBackgroundColor = register<
         }),
       );
     }
+
+    const containers = arrayToMap(nextElements);
+    nextElements = nextElements.map((element) => {
+      if (element.type === "text" && element.containerId) {
+        const container = containers.get(element.containerId);
+        if (isStickyNote(container)) {
+          return newElementWith(element, {
+            strokeColor: getStickyTextColor(container!.backgroundColor),
+          });
+        }
+      }
+      return element;
+    });
 
     return {
       elements: nextElements,

@@ -54,6 +54,8 @@ import type {
   ExcalidrawTextContainer,
 } from "@excalidraw/element/types";
 
+import { isStickyNote } from "../stickyNote";
+
 import { actionSaveToActiveFile } from "../actions";
 
 import {
@@ -806,7 +808,7 @@ export const textWysiwyg = ({
     );
 
     if (container) {
-      if (editable.value.trim()) {
+      if (editable.value.trim() || isStickyNote(container)) {
         const boundTextElementId = getBoundTextElementId(container);
         if (!boundTextElementId || boundTextElementId !== element.id) {
           app.scene.mutateElement(container, {
